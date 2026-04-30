@@ -304,6 +304,24 @@ IF Object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') TH
     			error := -20018;
 				error_message := N'The Label type cannot be blank or "Without Matangi Logo & Address".';
 		END IF;
+        -----------------------------------------------------------------------------------------
+        -- ADDED VALIDATION: Compulsory Email & Email Group Code for Mobi Alert Customers
+        -----------------------------------------------------------------------------------------
+        IF MobiAlert IN ('Y', 'Yes') THEN
+            IF EXISTS (
+                SELECT 1
+                FROM "OCRD" T0
+                LEFT JOIN "OCPR" T1 ON T0."CardCode" = T1."CardCode"
+                WHERE T0."CardCode" = :list_of_cols_val_tab_del
+                  AND (T1."Name" IS NULL
+                      OR IFNULL(T1."E_MailL", '') = ''
+                      OR IFNULL(T1."EmlGrpCode", '') = '-1')
+            ) THEN
+                error := -20024;
+                error_message := N'The Email ID and Email Group Code are compulsory in Contact Persons to send overdue Mobi Alerts.';
+            END IF;
+        END IF;
+        -----------------------------------------------------------------------------------------
     END IF;
 
     IF CardType = 'S' THEN
@@ -1828,10 +1846,10 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
         error_message := N'Please add a mobile number to the Business Partner Master Data.';
     END IF;
 
-    IF (VendorCode = 'VPRD0016' AND PaymentTerm NOT IN ('60 Days', '45 Days PDC')) OR (VendorCode <> 'VPRD0016' AND PaymentTerm <> BpPaymentTerm) THEN
+    /*IF (VendorCode = 'VPRD0016' AND PaymentTerm NOT IN ('60 Days', '45 Days PDC')) OR (VendorCode <> 'VPRD0016' AND PaymentTerm <> BpPaymentTerm) THEN
         error := -40027;
         error_message := N'Payment term does not match the Business Partner Master record.';
-    END IF;
+    END IF;*/
 
     IF IFNULL(DeliveryTerm,'') NOT IN ('FOB', 'CIF Mundra', 'CIF Nhava sheva', 'CIF Pipavav', 'CIP Mundra', 'CIP Nhava Sheva', 'Ex  work', 'CIF Nhavasheva/ Pipavav', 'CIF Nhavasheva/ Mundra', 'CIF Mundra / Pipavav', 'Delivered rate', 'CIP ICD Ahmedabad', 'CFR Nhava Sheva', 'DAP Mundra', 'DAP Vatva', 'DAP HO', 'DAP Saykha', 'CIP Mumbai airport', 'CIF ICD Ahmedabad') THEN
         error := -40028;
@@ -2184,10 +2202,10 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
             error_message := N'Please add a mobile number to the Business Partner Master Data.';
         END IF;
 
-        IF((VendorCode = 'VPRD0016' AND PaymentTerm NOT IN ('60 Days', '45 Days PDC')) OR (VendorCode <> 'VPRD0016' AND PaymentTerm <> BpPaymentTerm)) THEN
+        /*IF((VendorCode = 'VPRD0016' AND PaymentTerm NOT IN ('60 Days', '45 Days PDC')) OR (VendorCode <> 'VPRD0016' AND PaymentTerm <> BpPaymentTerm)) THEN
             error := -40057;
             error_message := N'Payment term does not match the Business Partner Master record.';
-        END IF;
+        END IF;*/
 
         IF IFNULL(DeliveryTerm,'') NOT IN ('FOB', 'CIF Mundra', 'CIF Nhava sheva', 'CIF Pipavav', 'CIP Mundra', 'CIP Nhava Sheva', 'Ex  work', 'CIF Nhavasheva/ Pipavav', 'CIF Nhavasheva/ Mundra', 'CIF Mundra / Pipavav', 'Delivered rate', 'CIP ICD Ahmedabad', 'CFR Nhava Sheva', 'DAP Mundra', 'DAP Vatva', 'DAP HO', 'DAP Saykha', 'CIP Mumbai airport', 'CIF ICD Ahmedabad') THEN
             error := -40058;
@@ -19462,7 +19480,7 @@ select T1."ItemCode" into Item from WTR1 T1 where T1."DocEntry" = :list_of_cols_
         end if;
 	end if;
 	if Item like 'PCPM%' then
-		if FromWhs = '2PC-PAC' and ToWhs not in ('2EX1PCPM','2BT','2RGP') then
+		if FromWhs = '2PC-PAC' and ToWhs not in ('2EX1PCPM','2BT','2RGP','2PCPACTU') then
             error := -1034;
             error_message := 'The PCPM from 2PC-PAC cannot be moved to any warehouse other than 2EX1PCPM,2BT';
         end if;

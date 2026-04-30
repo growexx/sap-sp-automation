@@ -271,6 +271,24 @@ IF Object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') TH
                 error := -20008;
                 error_message := N'Please select Mobi Alert Yes/No for Customer Payment reminder mail.';
             END IF;
+        -----------------------------------------------------------------------------------------
+        -- ADDED VALIDATION: Compulsory Email & Email Group Code for Mobi Alert Customers
+        -----------------------------------------------------------------------------------------
+        IF MobiAlert IN ('Y', 'Yes') THEN
+            IF EXISTS (
+                SELECT 1
+                FROM "OCRD" T0
+                LEFT JOIN "OCPR" T1 ON T0."CardCode" = T1."CardCode"
+                WHERE T0."CardCode" = :list_of_cols_val_tab_del
+                  AND (T1."Name" IS NULL
+                      OR IFNULL(T1."E_MailL", '') = ''
+                      OR IFNULL(T1."EmlGrpCode", '') = '-1')
+            ) THEN
+                error := -20024;
+                error_message := N'Validation Failed: Email ID and Email Group Code are compulsory in Contact Persons to send overdue Mobi Alerts.';
+            END IF;
+        END IF;
+        -----------------------------------------------------------------------------------------
         END IF;
 
         IF UsrCod IN ('crm01', 'crm04') THEN
@@ -11617,9 +11635,17 @@ Declare dayss Int;
 Declare VesselETD date;
 Declare VesselETA nvarchar(100);
 Declare TransitDays INT;
+Declare PreShipDocEntry int;
+DECLARE TempCount int;
 
 		SELECT "U_BLDate" INTO BLDate FROM "@SHIPMASTER" T0 WHERE T0."Code" = list_of_cols_val_tab_del;
 		SELECT "U_InvDet1","U_TransTime" INTO InvDet1,TransitDays FROM "@SHIPMASTER" T0 WHERE T0."Code" = list_of_cols_val_tab_del;
+		SELECT COUNT("U_PreShip1") into TempCount FROM "@SHIPMASTER" where "U_PreShip1" = PreShipDocEntry;
+
+		IF TempCount > 1 THEN
+		    error := 391;
+		    error_message := 'Entry already exists in IMEX for this Pre-Shipment Number';
+		END IF;
 
 		IF InvDet1 IS NOT NULL THEN
 			SELECT  T0."DocDate" INTO InvDocDate from OINV T0 WHERE T0."DocEntry" = InvDet1;
