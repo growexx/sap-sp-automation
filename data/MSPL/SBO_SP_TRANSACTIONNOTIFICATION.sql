@@ -282,7 +282,7 @@ IF Object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') TH
                 WHERE T0."CardCode" = :list_of_cols_val_tab_del
                   AND (T1."Name" IS NULL
                       OR IFNULL(T1."E_MailL", '') = ''
-                      OR IFNULL(T1."EmlGrpCode", '') = '-1')
+                      OR IFNULL(T1."EmlGrpCode", '') = '-1' OR IFNULL(T1."EmlGrpCode", '') = '')
             ) THEN
                 error := -20024;
                 error_message := N'Validation Failed: Email ID and Email Group Code are compulsory in Contact Persons to send overdue Mobi Alerts.';

@@ -2274,7 +2274,7 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
 		SELECT DAYS_BETWEEN(:DocDate, NOW()) INTO TEMP_COUNTER FROM DUMMY;
 		IF :TEMP_COUNTER > 7 THEN
 			error := -41001;
-			error_message := N'You are allowed to enter the Posting Date only up to 3 days before today.';
+			error_message := N'You are allowed to enter the Posting Date only up to 7 days before today.';
 		END IF;
 	END IF;
 
@@ -2293,7 +2293,7 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
 		FROM OPRQ T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
 		IF :TEMP_COUNTER > 7 THEN
 			error := -41004;
-			error_message := N'You are allowed to enter the Posting Date only up to 3 days before today.';
+			error_message := N'You are allowed to enter the Posting Date only up to 7 days before today.';
 		END IF;
 	END IF;
 
