@@ -457,6 +457,7 @@ IF Object_type = '17' AND (:transaction_type = 'A' or :transaction_type = 'U') T
     DECLARE v_cnt INT;
     DECLARE COA_Appr int;
     DECLARE SOPallet, Pallet1, Pallet2, Pallet3, PackingType NVARCHAR(50);
+    DECLARE IMItemName NVARCHAR(50);
 
     -- =======================================================
     -- SECTION 1: EFFICIENTLY SELECT ALL HEADER DATA UPFRONT
@@ -669,14 +670,14 @@ END IF;
             T2."ItmsGrpCod", IFNULL(T2."U_PCAT", ''), IFNULL(T2."U_PSCAT", ''), T1."U_NoOfBatchRequired",
             T2."U_Agro_Chem", T2."U_Per_HM_CR", T2."U_Food", T2."U_Paints_Pigm", T2."U_Indus_Care", T2."U_Lube_Additiv", T2."U_Textile", T2."U_Oil_Gas", T2."U_CAS_No",
             T2."U_Other1", T2."U_Other2", T2."U_Pharma", T2."U_Mining", count(ifnull(T1."U_ApprOnCOA", '')),
-            T1."U_Opack",IFNULL(T3."U_PalletCode01",''),IFNULL(T3."U_PalletCode02",''),IFNULL(T3."U_PalletCode03",'')
+            T1."U_Opack",IFNULL(T3."U_PalletCode01",''),IFNULL(T3."U_PalletCode02",''),IFNULL(T3."U_PalletCode03",''), t2."ItemName"
         INTO
             SOItemCode, SOWhse, SOEntryType, LicenseTypeSO, LicenseNoSO, PSS, Qty, TaxCode,PackingType,
             SOPackType, SOPckCode, Capacity, HASCOM, Commission, CommissionPer,
             ShowREX, typpltibc, SOName, Freetext,
             SOItemGrpCode, SOItemCategory, SOItemSubCategory, BatchCount,
             U_Agro_Chem, U_Per_HM_CR, U_Food, U_Paints_Pigm, U_Indus_Care, U_Lube_Additiv, U_Textile, U_Oil_Gas, U_CAS_No, U_Other1, U_Other2, U_Pharma, U_Mining,COA_Appr,
-            SOPallet,Pallet1,Pallet2,Pallet3
+            SOPallet,Pallet1,Pallet2,Pallet3, IMItemName
         FROM RDR1 T1
         INNER JOIN OITM T2 ON T1."ItemCode" = T2."ItemCode"
         INNER JOIN OCRD T3 ON T3."CardCode" = :CardCode
@@ -686,7 +687,7 @@ END IF;
             T1."U_ShowREX", T1."Dscription", T1."FreeTxt", T2."ItmsGrpCod", T2."U_PCAT", T2."U_PSCAT", T1."U_NoOfBatchRequired",
             T2."U_Agro_Chem", T2."U_Per_HM_CR", T2."U_Food", T2."U_Paints_Pigm", T2."U_Indus_Care", T2."U_Lube_Additiv", T2."U_Textile", T2."U_Oil_Gas", T2."U_CAS_No",
             T2."U_Other1", T2."U_Other2", T2."U_Pharma", T2."U_Mining",
-            T1."U_Opack",IFNULL(T3."U_PalletCode01",''),IFNULL(T3."U_PalletCode02",''),IFNULL(T3."U_PalletCode03",'');
+            T1."U_Opack",IFNULL(T3."U_PalletCode01",''),IFNULL(T3."U_PalletCode02",''),IFNULL(T3."U_PalletCode03",''), t2."ItemName";
 
         -- Validation 30032: Entry Type Check (Only for Add)
         IF (:transaction_type = 'A') AND (SOEntryType = 'Blank' AND (SOItemCode LIKE 'PCRM%' OR SOItemCode LIKE 'PCFG%')) THEN
@@ -798,6 +799,12 @@ END IF;
             error := 30047;
             error_message := 'Item Code (' || SOItemCode || ') at Row Number - ' || TO_NVARCHAR(MinSO + 1) || ' not having Category/Sub-Category, Please contact SAP team.';
         END IF;
+
+        --Validation 30047: Item Rename Check
+		if SOName !=  IMItemName then
+			error := 30047;
+			error_message := 'Item name cannot be changed at line ' || MinSO + 1;
+		end if;
 
         -- Validation 30048: Batch Count Check
         IF (SOItemCode LIKE '%FG%' OR SOItemCode LIKE '%RM%' OR SOItemCode LIKE '%TR%') AND BatchCount IS NULL THEN
@@ -1013,6 +1020,8 @@ IF Object_type = '112' AND (:transaction_type = 'A' or :transaction_type = 'U') 
         DECLARE EOSellType NVARCHAR(100);
         DECLARE COA_Appr INT;
         DECLARE SOPallet, Pallet1, Pallet2, Pallet3, PackingType NVARCHAR(50);
+        DECLARE SOItemName NVARCHAR(50);
+    	DECLARE IMItemName NVARCHAR(50);
     ----------------------------------------------------------------------------------------------------
     -- SECTION 1: UPFRONT DATA RETRIEVAL (EXECUTED ONCE)
     ----------------------------------------------------------------------------------------------------
@@ -1248,12 +1257,12 @@ END IF;
                    T2."ItmsGrpCod", T1."U_NoOfBatchRequired", T1."U_ShowREX", count(T1."U_TOPLT"),
                    T2."U_Agro_Chem", T2."U_Per_HM_CR", T2."U_Food", T2."U_Paints_Pigm", T2."U_Indus_Care", T2."U_Lube_Additiv", T2."U_Textile", T2."U_Oil_Gas", T2."U_CAS_No",
                    T2."U_Other1", T2."U_Other2", T2."U_Pharma", T2."U_Mining", T1."Dscription",T1."FreeTxt", count(ifnull(T1."U_ApprOnCOA", '')),
-                   T1."U_Opack",T3."U_PalletCode01",T3."U_PalletCode02",T3."U_PalletCode03"
+                   T1."U_Opack",T3."U_PalletCode01",T3."U_PalletCode02",T3."U_PalletCode03", t2."ItemName"
             INTO SOEntryType, SOWhse, SOItemCode, LicenseTypeSO, Qty, LicenseNoSO, PSS, TaxCode,PackingType,
                  SOPackType, SOPackng, Capacity, SOOtherPackng, HASCOM, Commission, CommissionPer,
                  SOItemGrpCode, BatchCount, ShowREX, typpltibc,
                  U_Agro_Chem, U_Per_HM_CR, U_Food, U_Paints_Pigm, U_Indus_Care, U_Lube_Additiv, U_Textile, U_Oil_Gas, U_CAS_No, U_Other1, U_Other2, U_Pharma, U_Mining, SOName,Freetext,COA_Appr,
-                 SOPallet,Pallet1,Pallet2,Pallet3
+                 SOPallet,Pallet1,Pallet2,Pallet3, IMItemName
             FROM DRF1 T1 JOIN ODRF ON ODRF."DocEntry" = T1."DocEntry"
             INNER JOIN OITM T2 ON T1."ItemCode" = T2."ItemCode"
             INNER JOIN OCRD T3 ON T3."CardCode" = :CardCodeSO
@@ -1263,7 +1272,7 @@ END IF;
                    T2."ItmsGrpCod", T1."U_NoOfBatchRequired", T1."U_ShowREX",
                    T2."U_Agro_Chem", T2."U_Per_HM_CR", T2."U_Food", T2."U_Paints_Pigm", T2."U_Indus_Care", T2."U_Lube_Additiv", T2."U_Textile", T2."U_Oil_Gas", T2."U_CAS_No",
                    T2."U_Other1", T2."U_Other2", T2."U_Pharma", T2."U_Mining", T1."Dscription", T1."FreeTxt",
-                   T1."U_Opack",T3."U_PalletCode01",T3."U_PalletCode02",T3."U_PalletCode03";
+                   T1."U_Opack",T3."U_PalletCode01",T3."U_PalletCode02",T3."U_PalletCode03", t2."ItemName";
 
             -- Validation 30055: Entry Type Check (Only for Add)
             IF (:transaction_type = 'A') AND (SOEntryType = 'Blank' AND (SOItemCode LIKE 'PCRM%' OR SOItemCode LIKE 'PCFG%')) THEN
@@ -1381,6 +1390,12 @@ END IF;
                     error_message := 'Customer is of '||CCodeType||' and Item ('|| SOItemCode ||') is of '||ItemCodeType||' at Row Number-'|| MinSO+1||', hence match both. [DRAFT]';
                 END IF;
             END IF;
+
+             --Validation 30073: Item Rename Check
+			if SOName !=  IMItemName then
+				error := 30047;
+				error_message := 'Item name cannot be changed at line ' || MinSO + 1;
+			end if;
 
             -- Validation 30074: Item Category and Sub-Category Check
             IF (SOItemCode LIKE '%FG%') THEN
@@ -13241,23 +13256,24 @@ END IF;
 END IF;
 
 --------------------A/P Credit Memo----------------
-IF Object_type = '112' and (:transaction_type ='A' or :transaction_type ='U' ) Then
+/*IF Object_type = '112' and (:transaction_type ='A' or :transaction_type ='U' ) Then
 Declare OcrCode nvarchar(50);
-(SELECT ODRF."ObjType" into DraftObj FROM ODRF WHERE ODRF."DocEntry"=:list_of_cols_val_tab_del );
-if DraftObj = 19
-THEN
-(Select  count(DRF1."OcrCode") into OcrCode
-	from DRF1 inner join ODRF on ODRF."DocEntry"=DRF1."DocEntry" where ODRF."DocEntry"=list_of_cols_val_tab_del and ODRF."ObjType"=19 and DRF1."OcrCode" is not null );
-          IF (OcrCode = 0) then
+
+(SELECT ODRF."ObjType" into DraftObj FROM ODRF WHERE ODRF."DocEntry"=:list_of_cols_val_tab_del);
+
+	IF DraftObj = 19 THEN
+
+		(Select  count(DRF1."OcrCode") into OcrCode
+			from DRF1 inner join ODRF on ODRF."DocEntry"=DRF1."DocEntry"
+			where ODRF."DocEntry"=list_of_cols_val_tab_del and ODRF."ObjType"=19 and DRF1."OcrCode" is not null );
+    	      IF (OcrCode = 0) then
                   error :=62;
                   error_message := N'Please Select Distr. Rule in Document';
-         End If;
-END IF;
-End If;
+        	 End If;
+	END IF;
+END IF;*/
 
 ----------------------------------------------
-
-
 
 IF object_type='112' AND (:transaction_type = 'A') THEN
 DECLARE entry int;
@@ -13266,8 +13282,7 @@ Declare MaxIT Int;
 Declare Count1 int;
 entry:=0;
 (SELECT ODRF."ObjType" into DraftObj FROM ODRF WHERE ODRF."DocEntry"=:list_of_cols_val_tab_del );
-if DraftObj = 15
-THEN
+if DraftObj = 15 THEN
 
 		SELECT Min(T0."VisOrder") INTO MinIT from DRF1 T0 where T0."DocEntry" =:list_of_cols_val_tab_del;
 		SELECT Max(T0."VisOrder") INTO MaxIT from DRF1 T0 where T0."DocEntry" =:list_of_cols_val_tab_del;

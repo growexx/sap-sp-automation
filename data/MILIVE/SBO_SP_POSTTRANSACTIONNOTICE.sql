@@ -979,9 +979,9 @@ WHERE T0."DocStatus" = 'O' AND T0."CANCELED" = 'N' AND (T1."ItemCode" LIKE 'E%' 
 
 		SELECT T0."DocEntry" INTO DocEntry FROM OPRQ T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del;
 
-		MailID = 'sap@matangiindustries.com';
+		MailID = 'purchase3@matangiindustries.com';
 		Mobile := '';
-		EmailCC := '';
+		EmailCC := 'purchasemgr@matangiindustries.com,ampurchase@matangiindustries.com';
 		EmailBCC := 'sap@matangiindustries.com';
 		ObjectType := 'P';
 		Mobi_TYPE := 'Engg_Service PR Updated';
