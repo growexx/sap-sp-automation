@@ -1572,7 +1572,8 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
 
     -- ========== Data Retrieval (Header) ==========
     SELECT T0."BPLId", T0."DocCur", T0."CardCode", T0."Footer", T0."U_Tag_number", T0."U_Del_Terms",
-           T2."PymntGroup", T3."USER_CODE", T4."U_Base_Doc", T0."DocDate", T0."DocDueDate", T5."SeriesName", T5."EndStr"
+           T2."PymntGroup", T3."USER_CODE", T4."U_Base_Doc", T0."DocDate", T0."DocDueDate", T5."SeriesName",
+           (CASE WHEN T5."SeriesName" LIKE 'DM%' THEN 'PO' ELSE T5."BeginStr" END)
     INTO HeaderBranch, DocCurrency, VendorCode, FooterText, TagNumber, DeliveryTerm, PaymentTerm, UserCode,
          BpBaseDocRequired, DocDate, DeliveryDate, SeriesName, Suffix
     FROM OPOR T0
@@ -1643,10 +1644,10 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
 	            error_message := N'PO and Purchase Request must be of the same Branch.';
 			END IF;
 
-			/*IF PR_CapexOpex <> PO_CapexOpex THEN
+			IF PR_CapexOpex <> PO_CapexOpex THEN
 				error := -40072;
 				error_message := N'Not allowed to change Capex/Opex at line - '|| MIN_ROW + 1;
-			END IF;*/
+			END IF;
         END IF;
 
         IF HeaderBranch = 3 AND IFNULL(Project, '') = '' THEN
@@ -1721,7 +1722,7 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             END IF;
         END IF;
 
-        /*IF BaseDocEntry IS NOT NULL THEN
+        IF BaseDocEntry IS NOT NULL THEN
             SELECT DAYS_BETWEEN(T1."DocDate", DocDate) INTO DaysDifference FROM OPRQ T1
             INNER JOIN PRQ1 T2 ON T1."DocEntry" = T2."DocEntry"
             INNER JOIN POR1 T3 ON T2."DocEntry" = T3."BaseEntry" AND T2."LineNum" = T3."BaseLine"
@@ -1735,7 +1736,7 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
                 error := -40020;
                 error_message := N'PO not allowed to enter less than PR date.';
             END IF;
-        END IF;*/
+        END IF;
 
         IF PlaceOfSupply <> ShipToState AND TaxCode NOT LIKE 'IGST%' THEN
             error := -40061;
@@ -1898,7 +1899,8 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 
         -- ========== Data Retrieval (Header) ==========
         SELECT T0."BPLId", T0."DocCur", T0."CardCode", T0."Footer", T0."U_Tag_number", T0."U_Del_Terms",
-               T2."PymntGroup", T3."USER_CODE", T4."U_Base_Doc", T0."DocDate", T0."DocDueDate", T5."SeriesName", T5."EndStr"
+               T2."PymntGroup", T3."USER_CODE", T4."U_Base_Doc", T0."DocDate", T0."DocDueDate", T5."SeriesName",
+               (CASE WHEN T5."SeriesName" LIKE 'DM%' THEN 'PO' ELSE T5."BeginStr" END)
         INTO HeaderBranch, DocCurrency, VendorCode, FooterText, TagNumber, DeliveryTerm, PaymentTerm, UserCode,
              BpBaseDocRequired, DocDate, DeliveryDate, SeriesName, Suffix
         FROM ODRF T0
@@ -1972,10 +1974,10 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 		            error_message := N'PO and Purchase Request must be of the same Branch.';
 				END IF;
 
-				/*IF PR_CapexOpex <> PO_CapexOpex THEN
+				IF PR_CapexOpex <> PO_CapexOpex THEN
 					error := -40072;
 					error_message := N'Not allowed to change Capex/Opex at line - '|| MIN_ROW + 1;
-				END IF;*/
+				END IF;
 	        END IF;
 
             IF HeaderBranch = 3 AND IFNULL(Project, '') = '' THEN
@@ -2130,11 +2132,6 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
             error_message := N'Please add a mobile number to the Business Partner Master Data.';
         END IF;
 
-        /*IF((VendorCode = 'VPRD0016' AND PaymentTerm NOT IN ('60 Days', '45 Days PDC')) OR (VendorCode <> 'VPRD0016' AND PaymentTerm <> BpPaymentTerm)) THEN
-            error := -40057;
-            error_message := N'Payment term does not match the Business Partner Master record.';
-        END IF;*/
-
         IF IFNULL(DeliveryTerm,'') NOT IN ('CIF ICD Ahmedabad', 'CIF Hazira','CIF Mundra', 'CIF Nhava sheva', 'CIF Pipavav', 'CIP Mundra', 'CIP Nhava Sheva', 'Ex  work', 'CIF Nhavasheva/ Pipavav', 'CIF Nhavasheva/ Mundra', 'CIF Mundra / Pipavav', 'Delivered rate', 'CIP ICD Ahmedabad', 'CFR Nhava Sheva', 'DAP Mundra', 'DAP Vatva', 'DAP HO', 'DAP Saykha', 'CIP Mumbai airport') THEN
             error := -40058;
             error_message := N'Please select a valid Delivery Term.';
@@ -2159,12 +2156,9 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
                 error_message := 'PO cannot be created without a PR for raw materials.';
             END IF;
         END IF;
-
     END IF;
 END IF;
-
 -------------------------------------------- END OF PURCHASE ORDER ---------------------------------------------------------
-
 -- =================================================================================================================================
 -- SAP B1 Transaction Notification: Purchase Request Validations
 -- Refactored and Consolidated Script

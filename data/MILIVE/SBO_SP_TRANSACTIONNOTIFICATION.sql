@@ -457,7 +457,7 @@ IF Object_type = '17' AND (:transaction_type = 'A' or :transaction_type = 'U') T
     DECLARE v_cnt INT;
     DECLARE COA_Appr int;
     DECLARE SOPallet, Pallet1, Pallet2, Pallet3, PackingType NVARCHAR(50);
-    DECLARE IMItemName NVARCHAR(50);
+    DECLARE IMItemName NVARCHAR(200);
 
     -- =======================================================
     -- SECTION 1: EFFICIENTLY SELECT ALL HEADER DATA UPFRONT
@@ -1021,7 +1021,7 @@ IF Object_type = '112' AND (:transaction_type = 'A' or :transaction_type = 'U') 
         DECLARE COA_Appr INT;
         DECLARE SOPallet, Pallet1, Pallet2, Pallet3, PackingType NVARCHAR(50);
         DECLARE SOItemName NVARCHAR(50);
-    	DECLARE IMItemName NVARCHAR(50);
+    	DECLARE IMItemName NVARCHAR(200);
     ----------------------------------------------------------------------------------------------------
     -- SECTION 1: UPFRONT DATA RETRIEVAL (EXECUTED ONCE)
     ----------------------------------------------------------------------------------------------------
@@ -1599,7 +1599,7 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
 
     -- ========== Data Retrieval (Header) ==========
     SELECT T0."BPLId", T0."DocCur", T0."CardCode", T0."Footer", T0."U_Tag_number", T0."U_Del_Terms",
-           T2."PymntGroup", T3."USER_CODE", T4."U_Base_Doc", T0."DocDate", T0."DocDueDate", T5."SeriesName", T5."EndStr"
+           T2."PymntGroup", T3."USER_CODE", T4."U_Base_Doc", T0."DocDate", T0."DocDueDate", T5."SeriesName", T5."BeginStr"
     INTO HeaderBranch, DocCurrency, VendorCode, FooterText, TagNumber, DeliveryTerm, PaymentTerm, UserCode,
          BpBaseDocRequired, DocDate, DeliveryDate, SeriesName, Suffix
     FROM OPOR T0
@@ -1957,7 +1957,7 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 
         -- ========== Data Retrieval (Header) ==========
         SELECT T0."BPLId", T0."DocCur", T0."CardCode", T0."Footer", T0."U_Tag_number", T0."U_Del_Terms",
-               T2."PymntGroup", T3."USER_CODE", T4."U_Base_Doc", T0."DocDate", T0."DocDueDate", T5."SeriesName", T5."EndStr"
+               T2."PymntGroup", T3."USER_CODE", T4."U_Base_Doc", T0."DocDate", T0."DocDueDate", T5."SeriesName", T5."BeginStr"
         INTO HeaderBranch, DocCurrency, VendorCode, FooterText, TagNumber, DeliveryTerm, PaymentTerm, UserCode,
              BpBaseDocRequired, DocDate, DeliveryDate, SeriesName, Suffix
         FROM ODRF T0
