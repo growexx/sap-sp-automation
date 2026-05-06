@@ -91,7 +91,7 @@ IF Object_type = '4' AND (:transaction_type = 'A' OR :transaction_type = 'U') TH
         error_message := N'You are not allowed to add/update Item Master';
     END IF;
 
-    If ItemGrpCode IN ('114','115','116','117') AND IFNULL(MILLP_ItemCode,'') = '' then
+    If ItemGrpCode IN ('114','115','116','117') AND IFNULL(MILLP_ItemCode,'') = '' AND ItemCode NOT LIKE 'NU%' then
 		error :=-10009;
 	    error_message := N'Please enter MILLP (Matangi) Item Code.';
 	END IF;
@@ -20787,6 +20787,7 @@ DECLARE ProdType nvarchar(5);
 		MinIn := MinIn + 1;
 	END WHILE;
 END IF;
+
     ----------------------------------------------------------
 
 /*IF Object_type = '60' and (:transaction_type ='A' or :transaction_type ='U') Then
