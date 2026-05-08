@@ -1759,10 +1759,10 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             error_message := N'You have selected a Service Series. Please select a Service item at row ' || MIN_ROW + 1;
         END IF;
 
-        IF Suffix LIKE 'PO%' AND ItemClass = '1' THEN
+        /*IF Suffix LIKE 'PO%' AND ItemClass = '1' THEN
             error := -40016;
             error_message := N'You have selected a Material Series. Please select a Material item at row ' || MIN_ROW + 1;
-        END IF;
+        END IF;*/
 
         SELECT COUNT(*) INTO TempCounter FROM DUMMY WHERE ItemCode LIKE '%RM%' OR ItemCode LIKE '%FG%' OR ItemCode LIKE '%TR%';
         IF TempCounter > 0 THEN
@@ -2092,10 +2092,10 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
                 error_message := N'You have selected a Service Series. Please select a Service item at row ' || MIN_ROW + 1;
             END IF;
 
-            IF Suffix LIKE 'PO%' AND ItemClass = '1' THEN
+            /*IF Suffix LIKE 'PO%' AND ItemClass = '1' THEN
                 error := -40042;
                 error_message := N'You have selected a Material Series. Please select a Material item at row ' || MIN_ROW + 1;
-            END IF;
+            END IF;*/
 
             SELECT COUNT(*) INTO TempCounter FROM DUMMY WHERE ItemCode LIKE '%RM%' OR ItemCode LIKE '%FG%' OR ItemCode LIKE '%TR%';
             IF TempCounter > 0 THEN
@@ -20618,7 +20618,7 @@ IF Object_type = '112' and (:transaction_type ='A' or :transaction_type ='U' ) T
 			error_message := N'You are not allowed to add RGP.';
 		END IF;
 
-		IF (FromWhs = '2RGP' or ToWhs = '2RGP') and UsrCod not in ('engg07','store01','project3') THEN
+		IF (FromWhs = '2RGP' or ToWhs = '2RGP') and UsrCod not in ('engg07','store01','project3', 'store02') THEN
 			error :=-1136;
 			error_message := N'You are not allowed to add RGP.';
 		END IF;
@@ -20738,7 +20738,7 @@ IF Object_type = '67' and (:transaction_type ='A' or :transaction_type ='U' ) Th
 		error_message := N'You are not allowed to add RGP.';
 	END IF;
 
-	IF (FromWhs = '2RGP' or ToWhs = '2RGP') and UsrCod not in ('engg07','store01','project3','manager') THEN
+	IF (FromWhs = '2RGP' or ToWhs = '2RGP') and UsrCod not in ('engg07','store01','project3','manager','store02') THEN
 		error :=-1154;
 		error_message := N'You are not allowed to add RGP.';
 	END IF;

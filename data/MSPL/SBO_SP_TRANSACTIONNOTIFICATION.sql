@@ -1644,10 +1644,10 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
 	            error_message := N'PO and Purchase Request must be of the same Branch.';
 			END IF;
 
-			IF PR_CapexOpex <> PO_CapexOpex THEN
-				error := -40072;
-				error_message := N'Not allowed to change Capex/Opex at line - '|| MIN_ROW + 1;
-			END IF;
+			--IF PR_CapexOpex <> PO_CapexOpex THEN
+				--error := -40072;
+				--error_message := N'Not allowed to change Capex/Opex at line - '|| MIN_ROW + 1;
+			--END IF;
         END IF;
 
         IF HeaderBranch = 3 AND IFNULL(Project, '') = '' THEN
@@ -1705,10 +1705,10 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
 	            error_message := N'You have selected a Service Series. Please select a Service item at row ' || MIN_ROW + 1;
     	    END IF;
 
-        	IF Suffix LIKE 'PO%' AND ItemClass = '1' AND SeriesName like 'DM%' THEN
+        	/*IF Suffix LIKE 'PO%' AND ItemClass = '1' AND SeriesName like 'DM%' THEN
             	error := -40016;
 	            error_message := N'You have selected a Material Series. Please select a Material item at row ' || MIN_ROW + 1;
-    	    END IF;
+    	    END IF;*/
         END IF;
 
         SELECT COUNT(*) INTO TempCounter FROM DUMMY WHERE ItemCode LIKE '%RM%' OR ItemCode LIKE '%FG%' OR ItemCode LIKE '%TR%';
@@ -1975,10 +1975,10 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 		            error_message := N'PO and Purchase Request must be of the same Branch.';
 				END IF;
 
-				IF PR_CapexOpex <> PO_CapexOpex THEN
-					error := -40072;
-					error_message := N'Not allowed to change Capex/Opex at line - '|| MIN_ROW + 1;
-				END IF;
+				--IF PR_CapexOpex <> PO_CapexOpex THEN
+					--error := -40072;
+					--error_message := N'Not allowed to change Capex/Opex at line - '|| MIN_ROW + 1;
+				--END IF;
 	        END IF;
 
             IF HeaderBranch = 3 AND IFNULL(Project, '') = '' THEN
@@ -2006,10 +2006,10 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
         	        error_message := N'You have selected a Service Series. Please select a Service item at row ' || MIN_ROW + 1;
             	END IF;
 
-	            IF Suffix LIKE 'PO%' AND ItemClass = '1' and SeriesName like 'DM%' THEN
+	            /*IF Suffix LIKE 'PO%' AND ItemClass = '1' and SeriesName like 'DM%' THEN
     	            error := -40042;
         	        error_message := N'You have selected a Material Series. Please select a Material item at row ' || MIN_ROW + 1;
-            	END IF;
+            	END IF;*/
             END IF;
 
             SELECT COUNT(*) INTO TempCounter FROM DUMMY WHERE ItemCode LIKE '%RM%' OR ItemCode LIKE '%FG%' OR ItemCode LIKE '%TR%';
