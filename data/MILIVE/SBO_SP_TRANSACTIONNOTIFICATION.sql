@@ -4708,7 +4708,7 @@ DECLARE ItemGR Nvarchar(50);
 	END WHILE;
 END IF;
 
-IF object_type = '59' AND (:transaction_type = 'A') THEN
+/*IF object_type = '59' AND (:transaction_type = 'A') THEN
 DECLARE MinGR Int;
 DECLARE MaxGR Int;
 DECLARE WhsGR Nvarchar(50);
@@ -4728,7 +4728,7 @@ DECLARE ItemGR Nvarchar(50);
 		END IF;
 		MinGR := MinGR+1;
 	END WHILE;
-END IF;
+END IF;*/
 
 --------------------------------------
 -- when creating/updating/deleting a Goods Receipt (object_type = 59)
@@ -9027,7 +9027,7 @@ DECLARE MaxPR int;
 	END WHILE;
 END IF;
 
-IF object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U')   THEN
+/*IF object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U')   THEN
 Declare ICode Nvarchar(150);
 Declare Iname Nvarchar(500);
 Declare Srs Nvarchar(150);
@@ -9069,7 +9069,7 @@ DECLARE MaxGI int;
 	     	END IF;
 	     MinGI=MinGI+1;
 		END WHILE;
-END IF;
+END IF;*/
 
 IF object_type = '59' AND (:transaction_type = 'A')  THEN
 Declare ICode Nvarchar(150);

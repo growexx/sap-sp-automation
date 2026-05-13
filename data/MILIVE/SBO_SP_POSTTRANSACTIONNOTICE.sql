@@ -743,7 +743,7 @@ End If;
 -------------------------------------Sales Order PI ------------------------------------------------------------------------------------
 IF (:object_type = '17' AND (:transaction_type IN ('A','U'))) THEN
 
-	select count(*) into Temp from ordr where "DocEntry"=:list_of_cols_val_tab_del;
+	select count(*) into Temp from ordr where "CardCode" LIKE 'C_E%' and "DocEntry"=:list_of_cols_val_tab_del;
 
 	If :Temp > 0 then
 
@@ -800,8 +800,8 @@ IF (:object_type = '17' AND (:transaction_type IN ('A','U'))) THEN
 	FROM ORDR T0 INNER JOIN OCRD T1 ON T0."CardCode" = T1."CardCode" INNER JOIN OSLP T2 ON T1."SlpCode" = T2."SlpCode"
 	WHERE T0."DocEntry" = :DocEntry;
 
-			Mobile := 'sap1@matangiindustries.com,sap2@matangiindustries.com,sap@matangiindustries.com';
-			EmailBCC := '';
+			Mobile := '';
+			EmailBCC := 'sap1@matangiindustries.com,sap2@matangiindustries.com,sap@matangiindustries.com';
 			ObjectType :='F';
 			Mobi_TYPE := 'Sales Order SC';
 			Select CURRENT_SCHEMA Into DBName from Dummy;
