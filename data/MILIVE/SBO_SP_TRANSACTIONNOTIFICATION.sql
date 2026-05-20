@@ -20116,7 +20116,7 @@ END;
 END IF;
 
 --------------------------Same Batch in Delivery as Sales Order Validation------30-01-2025---------
-IF object_type = '15' AND (:transaction_type = 'A') THEN
+/*IF object_type = '15' AND (:transaction_type = 'A') THEN
     DECLARE wrong_batch VARCHAR(100);
     DECLARE batch_count INTEGER;
 BEGIN
@@ -20186,7 +20186,7 @@ BEGIN
         END IF;
     END IF;
 END;
-END IF;
+END IF;*/
 
 IF Object_Type = 'GPass' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
     DECLARE Sent_ItemCode NVARCHAR(50);
