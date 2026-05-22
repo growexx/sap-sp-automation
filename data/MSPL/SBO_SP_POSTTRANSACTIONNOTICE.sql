@@ -424,7 +424,7 @@ Where T0."CANCELED"='N' AND T1."U_Department" = 'QC' AND T1."U_UNE_ITCD" IN ('OF
 If :Temp > 0 then
 
 		SELECT T0."DocEntry" INTO DocEntry FROM OQUT T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del;
-		MailID := 'unithead@minalspecialities.com';
+		MailID := 'unithead@minalspecialities.com,amproduction@minalspecialities.com,process2@minalspecialities.com,process3@minalspecialities.com,projectengg@minalspecialities.com';
 		Mobile := '';
 		EmailCC := '';
 		EmailBCC := 'sap@matangiindustries.com,sap2@matangiindustries.com';
