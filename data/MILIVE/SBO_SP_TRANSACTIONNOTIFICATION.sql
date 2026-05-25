@@ -359,7 +359,6 @@ IF Object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') TH
 END IF;
 
 ------------------------ END BUSINESS PARTNER MASTER VALIDATIONS -------------------------------
-
 ------------------------- SALES ORDER START -------------------------------
 
 IF Object_type = '17' AND (:transaction_type = 'A' or :transaction_type = 'U') THEN
@@ -936,7 +935,7 @@ IF SOPallet = 'NA'
     error_message := N'Pallet Code is mandatory when Packing Type is other than IBC Tank, ISO Tank, Tanker, or Loose.';
 END IF;
 
-
+/*IF (:transaction_type = 'A') THEN
 IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
 
         -- VALIDATION 1: ItemCode prefix must match Distribution Rule suffix
@@ -977,6 +976,7 @@ IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
                 END IF;
             END IF;
          END IF;
+         END IF;*/
         MinSO := MinSO + 1;
     END WHILE;
 END IF;
@@ -1578,6 +1578,7 @@ IF SOPallet = 'NA'
     error_message := N'Pallet Code is mandatory when Packing Type is other than IBC Tank, ISO Tank, Tanker, or Loose.';
 END IF;
 
+/*IF (:transaction_type = 'A') THEN
 IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
 
         -- VALIDATION 1: ItemCode prefix must match Distribution Rule suffix
@@ -1617,7 +1618,8 @@ IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
                                       '. Please select a rule without prefix 1 or 2';
                 END IF;
             END IF;
-         END IF;
+            END IF;
+         END IF;*/
             -- Increment loop counter
             MinSO := MinSO + 1;
         END WHILE;
@@ -4244,7 +4246,7 @@ End If;
 ----------------------------------------------
 -- FORM Name   : Delivery
 -- Note        : This SP will restrict user to create Delivery after 6:15 PM.
-IF object_type = '15' AND (:transaction_type ='A' ) THEN
+/*IF object_type = '15' AND (:transaction_type ='A' ) THEN
 DECLARE tim varchar(50);
 DECLARE Series varchar(50);
 	(select "CreateTS" into tim from ODLN WHERE "DocEntry" = list_of_cols_val_tab_del);
@@ -4266,7 +4268,7 @@ DECLARE Series varchar(50);
 			error :=73;
 			error_message := N'Not allowed to enter after 6:15 PM..';
 		END IF;
-END IF;
+END IF;*/
 
 ----------------------------------------
 IF object_type = '15' AND (:transaction_type = 'A') THEN
@@ -21327,6 +21329,8 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
     DECLARE v_ApprCOA NVARCHAR(5);
     DECLARE v_PSS NVARCHAR(5);
     DECLARE v_Batch NVARCHAR(25);
+    DECLARE v_InvExists NVARCHAR(25);
+    DECLARE v_AirBillNo NVARCHAR(25);
 
     -- NEW: Declarations for RTO Validation fields
     DECLARE v_RTO NVARCHAR(5);
@@ -21400,10 +21404,10 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
         -- Retrieve values from QUT1 for mandatory fields for the current row (UPDATED WITH NEW FIELDS)
         SELECT T1."U_UNE_ITCD", T1."U_FRTXT", T1."U_PR_Type", T1."TaxCode", T1."U_Department",
                T1."U_ResFrCust", T1."U_ReasonFail", T1."U_Deal_ID", T1."U_ApprOnCOA", T1."U_PSS",
-               T1."U_NoOfBatchRequired", T1."U_RTO", T1."U_ResDate", T1."U_OrderRec", T1."U_OrderDate"
+               T1."U_NoOfBatchRequired", T1."U_RTO", T1."U_ResDate", T1."U_OrderRec", T1."U_OrderDate", t1."U_AirBillNo"
         INTO v_U_UNE_ITCD, v_U_FRTXT, v_U_PR_TYPE, v_TaxCode, v_Department,
              v_ResFrCust, v_ReasonFail, v_DealNo, v_ApprCOA, v_PSS,
-             v_Batch, v_RTO, v_ResDate, v_OrderRec, v_OrderDate
+             v_Batch, v_RTO, v_ResDate, v_OrderRec, v_OrderDate, v_AirBillNo
         FROM QUT1 T1
         WHERE T1."DocEntry" = :list_of_cols_val_tab_del
         AND T1."VisOrder" = v_MINN;
@@ -21465,6 +21469,19 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
             error := -1226;
             error_message := 'Please enter No. of Batches Required.';
         END IF;
+
+        SELECT COUNT(*)
+		INTO v_InvExists
+		FROM INV1 T2
+		WHERE T2."BaseEntry" = :list_of_cols_val_tab_del
+	  	AND T2."BaseLine"  = v_MINN
+	  	AND T2."BaseType"  = 23;
+
+        IF v_InvExists = 0
+		   AND IFNULL(:v_AirBillNo, '') <> '' THEN
+		    error := -1227;
+		    error_message := 'Without Invoice you cannot add Airway Bill No.';
+		END IF;
 
         -- Increment the line index to move to the next row
         v_MINN = v_MINN + 1;
@@ -22880,8 +22897,7 @@ IF :object_type = '13' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
     END IF;
 END IF;
 ------------------------------Multiple Payment Terms for BP Master-----------------------------------
-IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
-
+/*IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
     -- Declare Variables
     DECLARE v_GroupNum INT;
     DECLARE v_MainGN NVARCHAR(10);
@@ -22968,8 +22984,7 @@ IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
             error_message := 'Policy Error: You cannot select a Payment Term that exceeds 90 days. Please select a shorter term.';
         END IF;
     END IF;
-
-END IF;
+END IF;*/
 
 -----------------------------------------------------------------------
 -- 1. PURCHASE ORDER DRAFT VALIDATION (OBJECT 112 -> 22)
