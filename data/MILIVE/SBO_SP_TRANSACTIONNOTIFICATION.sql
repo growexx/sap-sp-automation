@@ -21337,6 +21337,7 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
     DECLARE v_ResDate DATE;
     DECLARE v_OrderRec NVARCHAR(50);
     DECLARE v_OrderDate DATE;
+    DECLARE v_ItemCode NVARCHAR(50);
 
     -- Get values from OQUT table
     SELECT T0."U_Consignee_Name",T0."U_Consignee_Add",T0."U_Notify_Party",T0."U_Notify_add",T0."U_Incoterms",T0."U_OConName",T0."U_DConName",
@@ -21404,10 +21405,10 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
         -- Retrieve values from QUT1 for mandatory fields for the current row (UPDATED WITH NEW FIELDS)
         SELECT T1."U_UNE_ITCD", T1."U_FRTXT", T1."U_PR_Type", T1."TaxCode", T1."U_Department",
                T1."U_ResFrCust", T1."U_ReasonFail", T1."U_Deal_ID", T1."U_ApprOnCOA", T1."U_PSS",
-               T1."U_NoOfBatchRequired", T1."U_RTO", T1."U_ResDate", T1."U_OrderRec", T1."U_OrderDate", t1."U_AirBillNo"
+               T1."U_NoOfBatchRequired", T1."U_RTO", T1."U_ResDate", T1."U_OrderRec", T1."U_OrderDate", t1."U_AirBillNo", T1."ItemCode"
         INTO v_U_UNE_ITCD, v_U_FRTXT, v_U_PR_TYPE, v_TaxCode, v_Department,
              v_ResFrCust, v_ReasonFail, v_DealNo, v_ApprCOA, v_PSS,
-             v_Batch, v_RTO, v_ResDate, v_OrderRec, v_OrderDate, v_AirBillNo
+             v_Batch, v_RTO, v_ResDate, v_OrderRec, v_OrderDate, v_AirBillNo, v_ItemCode
         FROM QUT1 T1
         WHERE T1."DocEntry" = :list_of_cols_val_tab_del
         AND T1."VisOrder" = v_MINN;
@@ -21468,6 +21469,9 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
         ELSEIF v_Batch IS NULL OR LENGTH(TRIM(v_Batch)) = 0 THEN
             error := -1226;
             error_message := 'Please enter No. of Batches Required.';
+        ELSEIF v_ItemCode <> 'SER0248' THEN
+            error := -1227;
+            error_message := 'Item Code other than SER0248 not allowed.';
         END IF;
 
         SELECT COUNT(*)
@@ -22419,8 +22423,9 @@ DECLARE VendorCode varchar(50);
 		END WHILE;
 	END IF;
 END IF;
+
 ----------------------------------- WeighBridge -----------------------------------------------------
-/*IF object_type = '20' AND (:transaction_type = 'U') THEN
+IF object_type = '20' AND (:transaction_type = 'U') THEN
     DECLARE WB_SlipNo_Str NVARCHAR(50);
     DECLARE WB_NetWt DECIMAL(19,6);
     DECLARE WB_InDate DATE;
@@ -22433,6 +22438,7 @@ END IF;
     DECLARE GRN_PType NVARCHAR(100); -- Variable for Packing Type
     DECLARE GRN_BPLId INT;           -- Variable for Branch ID
     DECLARE RowCount INT := 0;
+    DECLARE WeighOut NVARCHAR(5);
 
     -- 1. Fetch GRN values including Branch and Packing Type
     SELECT TOP 1
@@ -22441,15 +22447,16 @@ END IF;
         T0."U_UNE_GEDT",
         T0."U_UNE_VehicleNo",
         T1."U_PTYPE",        -- Fetching Packing Type from Line
-        T0."BPLId"           -- Fetching Branch ID from Header
+        T0."BPLId",          -- Fetching Branch ID from Header
+		T0."U_WeighOut"
     INTO
-        GRN_SlipNo_Num, GRN_ActualQty, GRN_GateDate, GRN_Vehicle, GRN_PType, GRN_BPLId
+        GRN_SlipNo_Num, GRN_ActualQty, GRN_GateDate, GRN_Vehicle, GRN_PType, GRN_BPLId, WeighOut
     FROM OPDN T0
     INNER JOIN PDN1 T1 ON T0."DocEntry" = T1."DocEntry"
     WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
 
     -- 2. New Condition: Only validate if Branch is 4 and Type is TANKER%
-    IF :GRN_BPLId = 4 AND UPPER(:GRN_PType) LIKE 'TANKER%' THEN
+    IF UPPER(:GRN_PType) LIKE 'TANKER%' AND :WeighOut = 'No' THEN
 
         -- Existing validation logic starts here
         IF :GRN_SlipNo_Num > 0 THEN
@@ -22497,7 +22504,8 @@ END IF;
             END IF;
         END IF;
     END IF;
-END IF;*/
+END IF;
+
 ---------------------------------Outgoing Payment Delay Reason Compulsory, Payment after 7 Days against PO Date[Draft]------------------------
 IF :object_type = '112'  AND :transaction_type IN ('A', 'U') THEN
   DECLARE DelayDays INT;

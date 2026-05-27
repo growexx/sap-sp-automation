@@ -86,7 +86,7 @@ IF Object_type = '4' AND (:transaction_type = 'A' OR :transaction_type = 'U') TH
         END IF;
     END IF;
 
-    IF UsrCod NOT IN ('prof01', 'dipurchase', 'purchase01','purchase02', 'manager', 'sap01', 'engg01', 'engg02', 'engg04', 'engg05', 'engg06', 'engg07') THEN
+    IF UsrCod NOT IN ('prof02','prof01', 'dipurchase', 'purchase01','purchase02', 'manager', 'sap01', 'engg01', 'engg02', 'engg04', 'engg05', 'engg06', 'engg07') THEN
     	error := -10008;
         error_message := N'You are not allowed to add/update Item Master';
     END IF;
@@ -103,7 +103,7 @@ END IF;
 -- Object_type = '2' (Business Partner)
 
 ------------------------------ BUSINESS PARTNER --------------------------------------------
-/*IF Object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+IF Object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
     DECLARE CardType nvarchar(50);
     DECLARE Organisation nvarchar(50);
     DECLARE Industry nvarchar(50);
@@ -394,7 +394,7 @@ END IF;
     		END IF;
         END IF;
     END IF;
-END IF;*/
+END IF;
 ------------------------ END BUSINESS PARTNER MASTER VALIDATIONS -------------------------------
 
 --------------------------------- SALES ORDER START ----------------------------------
@@ -2670,13 +2670,13 @@ Declare PrdUser  Nvarchar(50);
 select "SeriesName" into PrdSeries From OWOR INNER JOIN NNM1 ON NNM1."Series" = OWOR."Series" where "DocEntry"= :list_of_cols_val_tab_del;
 select OUSR."USER_CODE" into PrdUser from OWOR INNER JOIN OUSR ON OUSR."USERID" = OWOR."UserSign" where OWOR."DocEntry"= :list_of_cols_val_tab_del;
 
-		if PrdUser NOT LIKE '%prod01%' and PrdSeries LIKE 'SC%' then
+		if PrdUser NOT LIKE '%engg03%' and PrdSeries LIKE 'SC%' then
         	error :=21;
         	error_message := N'You are not allowed to select SC Series1';
 		end if;
 end if;
 
-If Object_Type = '59' and (:transaction_type='A' ) then
+/*If Object_Type = '59' and (:transaction_type='A' ) then
 Declare PrdSeries  Nvarchar(50);
 Declare PrdUser  Nvarchar(50);
 select "SeriesName" into PrdSeries From OIGN INNER JOIN NNM1 ON NNM1."Series" = OIGN."Series" where OIGN."DocEntry"= :list_of_cols_val_tab_del;
@@ -2686,7 +2686,7 @@ select OUSR."USER_CODE" into PrdUser from OIGN INNER JOIN OUSR ON OUSR."USERID" 
         	error :=22;
         	error_message := N'You are not allowed to select SC Series1';
 		end if;
-end if;
+end if;*/
 
 IF object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
 DECLARE MinGI Int;
@@ -4581,7 +4581,7 @@ DECLARE DLSeries nvarchar(50);
 			error_message:=N'Please Select Proper Currency';
 		END IF;
 		IF (DLSeries NOT LIKE 'CL%' and DLSeries NOT LIKE 'DM%') THEN
-			IF (DLParty LIKE 'CSE%' and DLSeries NOT LIKE 'EX%' ) THEN
+			IF (DLParty LIKE 'CSE%' and DLSeries NOT LIKE 'EX%' and DLSeries NOT LIKE 'ET%' ) THEN
 				error:=79;
 				error_message:=N'Please Select Proper Series';
 			END IF;
@@ -4601,19 +4601,19 @@ DECLARE ADSeries nvarchar(50);
 	(SELECT T0."DocCur" into ADCurrency FROM ODPI T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del);
 	(SELECT T1."SeriesName" into ADSeries FROM ODPI T0 INNER JOIN NNM1 T1 ON T0."Series" = T1."Series" WHERE T0."DocEntry"=:list_of_cols_val_tab_del );
 		IF (ADParty LIKE 'CPE%' and ADCurrency = 'INR') THEN
-			error:=80;
+			error:=801;
 			error_message:=N'Please Select Proper Currency';
 		END IF;
 		IF (ADParty LIKE 'CSE%' and ADCurrency = 'INR') THEN
-			error:=80;
+			error:=802;
 			error_message:=N'Please Select Proper Currency';
 		END IF;
-		IF (ADParty LIKE 'CSE%' and ADSeries NOT LIKE 'EX%' ) THEN
-			error:=80;
+		IF (ADParty LIKE 'CSE%' and ADSeries NOT LIKE 'EX%' and ADSeries NOT LIKE 'ET%' ) THEN
+			error:=803;
 			error_message:=N'Please Select Proper Series';
 		END IF;
 		IF (ADParty LIKE 'CPE%' and ADSeries NOT LIKE 'EX%' ) THEN
-			error:=80;
+			error:=804;
 			error_message:=N'Please Select Proper Series';
 		END IF;
 END IF;
@@ -5740,7 +5740,7 @@ DECLARE INSeries nvarchar(50);
 			error_message:=N'Please Select Proper Currency';
 		END IF;
 		IF (INSeries NOT LIKE 'CL%') THEN
-			IF (INParty LIKE 'CSE%' and INSeries NOT LIKE 'EX%' and INSeries NOT LIKE 'EM%') THEN
+			IF (INParty LIKE 'CSE%' and INSeries NOT LIKE 'EX%' and INSeries NOT LIKE 'EM%' and INSeries NOT LIKE 'ET%') THEN
 				error:=130;
 				error_message:=N'Please Select Proper Series';
 			END IF;
@@ -12484,8 +12484,7 @@ END IF;
 
 ---------------------------------------------
 
-IF Object_type = '202' and (:transaction_type ='A' OR :transaction_type = 'U')
-Then
+IF Object_type = '202' and (:transaction_type ='A' OR :transaction_type = 'U') Then
 Declare OWOR_U_Q_DIFG nvarchar(50);
 Declare OWOR_U_Q_DIFG2 nvarchar(50);
 Declare OWOR_U_Q_DIFG3 nvarchar(50);
@@ -12495,8 +12494,7 @@ Declare OWOR_U_Q_PCFG3 nvarchar(50);
 Declare OWOR_ItemCode Nvarchar(50);
 Declare OWOR_Code Nvarchar(50);
 
-select  DISTINCT(T2."Location") INTO OWOR_Code
- From OWOR T0
+select  DISTINCT(T2."Location") INTO OWOR_Code From OWOR T0
 LEFT JOIN WOR1 T1 ON T1."DocEntry"=T0."DocEntry"
 LEFT JOIN OLCT T2 ON T2."Code"=T1."LocCode"
 WHERE  T0."DocEntry"= :list_of_cols_val_tab_del ;
@@ -12515,19 +12513,9 @@ SELECT Count(T0."DocEntry")   INTO OWOR_U_Q_PCFG2 FROM OWOR T0  WHERE T0."DocEnt
 
 SELECT Count(T0."DocEntry")   INTO OWOR_U_Q_PCFG3 FROM OWOR T0  WHERE T0."DocEntry" =list_of_cols_val_tab_del and ifnull(T0."U_Q_PCFG3",'')='';
 
-		if (OWOR_ItemCode like 'SC%' AND OWOR_Code = 'UNIT - I')
-		then
-		IF OWOR_U_Q_DIFG >0
-		THEN
-		error := 27271;
-		error_message := 'Q_DIFG Should be mandatory ';
-	END IF;
-	END IF;
 
-		if (OWOR_ItemCode like 'SC%' AND OWOR_Code = 'UNIT - II')
-		then
-		IF OWOR_U_Q_DIFG2 >0
-		THEN
+		if (OWOR_ItemCode like 'SC%' AND OWOR_Code = 'UNIT - II') then
+		IF OWOR_U_Q_DIFG2 >0 THEN
 		error := 27272;
 		error_message := 'Q_DIFG2 Should be mandatory ';
 	END IF;
@@ -14159,7 +14147,7 @@ THEN
 			error_message:=N'Please Select Proper Currency';
 		END IF;
 		IF (DLSeries NOT LIKE 'CL%' and DLSeries NOT LIKE 'DM%') THEN
-			IF (DLParty LIKE 'CSE%' and DLSeries NOT LIKE 'EX%' ) THEN
+			IF (DLParty LIKE 'CSE%' and DLSeries NOT LIKE 'EX%' and DLSeries NOT LIKE 'ET%') THEN
 				error:=79;
 				error_message:=N'Please Select Proper Series';
 			END IF;
@@ -20775,7 +20763,7 @@ DECLARE BaseTypee int;
 						error := -1199;
 						error_message := N'Please select proper Warehouse.';
 				END IF;
-				IF (ReceiptWhsCode in ('JW-QC','OF-PT-DI') and ReceiptItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013')) then
+				IF (ReceiptWhsCode in ('JW-QC','OF-PT-DI') and ReceiptItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013', 'SCFG0020')) then
 						error := -1200;
 						error_message := N'Please select proper Item.';
 				END IF;
@@ -20823,21 +20811,21 @@ DECLARE ProdOrderType nvarchar(50);
 
 
 	IF ProdOrderType = 'S' then
-	  	IF (ProdOrderItemCode in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013') and ProdOrderWhsCode not in ('JW-QC', 'OF-PORT')) then
+	  	IF (ProdOrderItemCode in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','SCFG0020') and ProdOrderWhsCode not in ('JW-QC', 'OF-PORT')) then
 				error := -1203;
 				error_message := N'Please select proper Warehouse.';
 		END IF;
-		IF (ProdOrderWhsCode in ('JW-QC', 'OF-PORT') and ProdOrderItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013')) then
+		IF (ProdOrderWhsCode in ('JW-QC', 'OF-PORT') and ProdOrderItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','SCFG0020')) then
 				error := -1204;
 				error_message := N'Please select proper Item.';
 		END IF;
 	END IF;
 	IF ProdOrderType = 'P' then
-	  	IF (ProdOrderItemCode in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013') and ProdOrderWhsCode not in ('JW-QC','OF-PT-DI')) then
+	  	IF (ProdOrderItemCode in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','SCFG0020') and ProdOrderWhsCode not in ('JW-QC','OF-PT-DI')) then
 				error := -1205;
 				error_message := N'Please select proper Warehouse.';
 		END IF;
-		IF (ProdOrderWhsCode in ('JW-QC','OF-PT-DI') and ProdOrderItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013')) then
+		IF (ProdOrderWhsCode in ('JW-QC','OF-PT-DI') and ProdOrderItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','SCFG0020')) then
 				error := -1206;
 				error_message := N'Please select proper Item.';
 		END IF;
@@ -21520,6 +21508,7 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
     DECLARE v_ResDate DATE;
     DECLARE v_OrderRec NVARCHAR(50);
     DECLARE v_OrderDate DATE;
+    DECLARE v_ItemCode NVARCHAR(50);
 
     -- Get values from OQUT table
     SELECT T0."U_Consignee_Name",T0."U_Consignee_Add",T0."U_Notify_Party",T0."U_Notify_add",T0."U_Incoterms",T0."U_OConName",T0."U_DConName",
@@ -21587,10 +21576,10 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
         -- Retrieve values from QUT1 for mandatory fields for the current row (UPDATED WITH NEW FIELDS)
         SELECT T1."U_UNE_ITCD", T1."U_FRTXT", T1."U_PR_Type", T1."TaxCode", T1."U_Department",
                T1."U_ResFrCust", T1."U_ReasonFail", T1."U_Deal_ID", T1."U_ApprOnCOA", T1."U_PSS",
-               T1."U_NoOfBatchRequired", T1."U_RTO", T1."U_ResDate", T1."U_OrderRec", T1."U_OrderDate", t1."U_AirBillNo"
+               T1."U_NoOfBatchRequired", T1."U_RTO", T1."U_ResDate", T1."U_OrderRec", T1."U_OrderDate", t1."U_AirBillNo", T1."ItemCode"
         INTO v_U_UNE_ITCD, v_U_FRTXT, v_U_PR_TYPE, v_TaxCode, v_Department,
              v_ResFrCust, v_ReasonFail, v_DealNo, v_ApprCOA, v_PSS,
-             v_Batch, v_RTO, v_ResDate, v_OrderRec, v_OrderDate, v_AirBillNo
+             v_Batch, v_RTO, v_ResDate, v_OrderRec, v_OrderDate, v_AirBillNo, v_ItemCode
         FROM QUT1 T1
         WHERE T1."DocEntry" = :list_of_cols_val_tab_del
         AND T1."VisOrder" = v_MINN;
@@ -21651,6 +21640,9 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
         ELSEIF v_Batch IS NULL OR LENGTH(TRIM(v_Batch)) = 0 THEN
             error := -1226;
             error_message := 'Please enter No. of Batches Required.';
+        ELSEIF v_ItemCode <> 'SER0229' THEN
+            error := -1227;
+            error_message := 'Item Code other than SER0229 not allowed.';
         END IF;
 
         SELECT COUNT(*)
@@ -24111,6 +24103,38 @@ IF :object_type = '13' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             error_message := 'BE1/BE2 series is only for Vessel shipments. [Row: ' || :ErrorLineStr || ', Item: ' || :ErrorItemStr || ']';
         END IF;
     END IF;
+END IF;
+
+---------------------Pipe and SS 2% Deviation allowed-------------
+IF object_type = '20' AND (:transaction_type = 'A' Or :transaction_type = 'U') THEN
+DECLARE GRPOQTD Int;
+DECLARE MinLinePDQ Int;
+DECLARE MaxLinePDQ Int;
+DECLARE POQTB Int;
+DECLARE ItemCDPQD Nvarchar(50);
+DECLARE DOCTPDQ Nvarchar (50);
+Declare PackType Nvarchar(50);
+Declare COUNT1 Int;
+
+	SELECT Min(T0."VisOrder") INTO MinLinePDQ from PDN1 T0 where T0."DocEntry" =:list_of_cols_val_tab_del;
+	SELECT Max(T0."VisOrder") INTO MaxLinePDQ from PDN1 T0 where T0."DocEntry" =:list_of_cols_val_tab_del;
+	WHILE :MinLinePDQ<=MaxLinePDQ DO
+		SELECT Distinct (PDN1."Quantity") INTO GRPOQTD FROM PDN1  where PDN1."DocEntry" =:list_of_cols_val_tab_del and PDN1."VisOrder"=MinLinePDQ ;
+		SELECT Distinct (PDN1."BaseOpnQty") INTO POQTB FROM PDN1  where PDN1."DocEntry" =:list_of_cols_val_tab_del and PDN1."VisOrder"=MinLinePDQ ;
+		SELECT Distinct (PDN1."ItemCode") INTO ItemCDPQD FROM PDN1 where PDN1."DocEntry" =:list_of_cols_val_tab_del and PDN1."VisOrder"=MinLinePDQ ;
+		SELECT Distinct (OPDN."DocType") INTO DOCTPDQ FROM OPDN Inner JOIN PDN1 ON OPDN."DocEntry"=PDN1."DocEntry" Where OPDN."DocEntry" =:list_of_cols_val_tab_del ;
+
+		select Count(*) INTO COUNT1 from "@PIPEANDSS" WHERE "Code" IN(ItemCDPQD);
+		IF ItemCDPQD LIKE 'E%' THEN
+			IF COUNT1 > 0 THEN
+				IF  :DOCTPDQ = 'I' And (:GRPOQTD > (POQTB + ((POQTB*2)/100))) THEN
+					error :=342;
+					error_message := N'GRPO Qty. should not greater then P.O Qty.2%.'||ItemCDPQD;
+				END IF;
+			END IF;
+		END IF;
+		MinLinePDQ := MinLinePDQ+1;
+	END WHILE;
 END IF;
 -- Select the return values-
 select :error, :error_message FROM dummy;
