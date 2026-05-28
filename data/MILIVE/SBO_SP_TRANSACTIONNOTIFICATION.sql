@@ -1849,7 +1849,7 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             error_message := N'You have selected a Service Series. Please select a Service item at row ' || MIN_ROW + 1;
         END IF;
 
-        IF Suffix LIKE 'PO%' AND ItemClass = '1' THEN
+        IF Suffix LIKE 'PO%' AND ItemClass = '1' AND SeriesName like 'DM%' THEN
             error := -40016;
             error_message := N'You have selected a Material Series. Please select a Material item at row ' || MIN_ROW + 1;
         END IF;
@@ -2182,7 +2182,7 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
                 error_message := N'You have selected a Service Series. Please select a Service item at row ' || MIN_ROW + 1;
             END IF;
 
-            IF Suffix LIKE 'PO%' AND ItemClass = '1' THEN
+            IF Suffix LIKE 'PO%' AND ItemClass = '1' AND SeriesName like 'DM%' THEN
                 error := -40042;
                 error_message := N'You have selected a Material Series. Please select a Material item at row ' || MIN_ROW + 1;
             END IF;

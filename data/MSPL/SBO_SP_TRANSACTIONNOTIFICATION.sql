@@ -6076,6 +6076,7 @@ DECLARE ItemCd Nvarchar(10);
 	END WHILE;
 END IF;
 
+
 IF Object_type = '18' and (:transaction_type ='A' or :transaction_type ='U' ) Then
 Declare BaseType nvarchar(50);
 (Select max(PCH1."BaseType") into BaseType
