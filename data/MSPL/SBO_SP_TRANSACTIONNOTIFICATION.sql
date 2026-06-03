@@ -12409,9 +12409,9 @@ Declare Temp nvarchar(20);
 
 	select OWOR."U_Reactor_num" into ReactorNo from OWOR WHERE OWOR."DocEntry"= :list_of_cols_val_tab_del;
 
-	select WOR1."U_Startdate" into StartDate from WOR1 WHERE WOR1."DocEntry"= :list_of_cols_val_tab_del AND WOR1."LineNum" = 0;
+	select WOR1."U_Startdate" into StartDate from WOR1 WHERE WOR1."DocEntry"= :list_of_cols_val_tab_del AND WOR1."VisOrder" = 0;
 
-	select WOR1."U_Starttime" into StartTime from WOR1 WHERE WOR1."DocEntry"= :list_of_cols_val_tab_del AND WOR1."LineNum" = 0;
+	select WOR1."U_Starttime" into StartTime from WOR1 WHERE WOR1."DocEntry"= :list_of_cols_val_tab_del AND WOR1."VisOrder" = 0;
 
 	select COUNT(OWOR."DocEntry") into Entry from OWOR INNER JOIN WOR1 ON OWOR."DocEntry" = WOR1."DocEntry" WHERE OWOR."U_Reactor_num"= ReactorNo AND WOR1."U_Enddate" = StartDate AND WOR1."U_Endtime" > StartTime AND WOR1."U_Starttime" < StartTime ;
 
