@@ -190,7 +190,7 @@ IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
     -- ─────────────────────────────────────────────────────────────
     -- DUPLICATE GST CHECK — Vendor
     -- ─────────────────────────────────────────────────────────────
-    IF CardType = 'S' AND :list_of_cols_val_tab_del LIKE 'V%'
+    /*IF CardType = 'S' AND :list_of_cols_val_tab_del LIKE 'V%'
                       AND :list_of_cols_val_tab_del NOT LIKE 'V__I%' THEN
         IF EXISTS (
             SELECT 1 FROM CRD1 T0
@@ -209,7 +209,7 @@ IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
             error := -20021;
             error_message := N'Duplicate GST Number found in an Active Pay-to address of another Vendor.';
         END IF;
-    END IF;
+    END IF;*/
 
     -- ─────────────────────────────────────────────────────────────
     -- DUPLICATE FOREIGN NAME — Employee
@@ -1730,6 +1730,9 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
 	DECLARE PR_CapexOpex NVARCHAR(10);
 	DECLARE PO_BaseLine NVARCHAR(10);
 
+	DECLARE MaxShipDate DATE;
+    DECLARE IsRM INT;
+
 
     -- ========== Data Retrieval (Header) ==========
     SELECT T0."BPLId", T0."DocCur", T0."CardCode", T0."Footer", T0."U_Tag_number", T0."U_Del_Terms",
@@ -1998,7 +2001,21 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             error_message := 'PO cannot be created without a PR for raw materials.';
         END IF;
     END IF;
+	/*SELECT COUNT(*) INTO IsRM FROM POR1 T0
+    WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ItemCode" LIKE '%RM%';
 
+    IF IsRM > 0 AND DocDate >= '2026-06-09' THEN
+        SELECT MAX(T0."ShipDate") INTO MaxShipDate
+        FROM POR1 T0
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
+
+        -- Using the pre-assigned :DeliveryDate variable which holds OPOR."DocDueDate"
+        IF :MaxShipDate <> :DeliveryDate THEN
+            error := -40031;
+            error_message := N'The Maximum Row Delivery Date (' || TO_VARCHAR(:MaxShipDate, 'YYYY-MM-DD') ||
+                             N') must exactly match the Header Delivery Date (' || TO_VARCHAR(:DeliveryDate, 'YYYY-MM-DD') || N').';
+        END IF;
+    END IF;*/
 END IF;
 -- =========================================================================================================
 --  Draft Document Validations (Object Type: 112 for PO)
@@ -2058,6 +2075,9 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
         DECLARE PO_CapexOpex NVARCHAR(10);
 		DECLARE PR_CapexOpex NVARCHAR(10);
 		DECLARE PO_BaseLine NVARCHAR(10);
+
+		DECLARE MaxShipDate DATE;
+    	DECLARE IsRM INT;
 
         -- ========== Data Retrieval (Header) ==========
         SELECT T0."BPLId", T0."DocCur", T0."CardCode", T0."Footer", T0."U_Tag_number", T0."U_Del_Terms",
@@ -2320,6 +2340,21 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
             END IF;
         END IF;
     END IF;
+    /*SELECT COUNT(*) INTO IsRM FROM DRF1 T0 JOIN ODRF T1 on T0."DocEntry" = T1."DocEntry"
+    WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ItemCode" LIKE '%RM%' AND T1."ObjType" = 22;
+
+    IF IsRM > 0 AND DocDate >= '2026-06-09' THEN
+        SELECT MAX(T0."ShipDate") INTO MaxShipDate
+        FROM DRF1 T0 JOIN ODRF T1 on T0."DocEntry" = T1."DocEntry"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T1."ObjType" = 22;
+
+        -- Using the pre-assigned :DeliveryDate variable which holds OPOR."DocDueDate"
+        IF :MaxShipDate <> :DeliveryDate THEN
+            error := -40031;
+            error_message := N'The Maximum Row Delivery Date (' || TO_VARCHAR(:MaxShipDate, 'YYYY-MM-DD') ||
+                             N') must exactly match the Header Delivery Date (' || TO_VARCHAR(:DeliveryDate, 'YYYY-MM-DD') || N').';
+        END IF;
+    END IF;*/
 END IF;
 -------------------------------------------- END OF PURCHASE ORDER ---------------------------------------------------------
 -- =================================================================================================================================
