@@ -2113,17 +2113,17 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
                 error_message := N'Extended warehouse is not allowed for item ' || ItemCode || ' at row ' || MIN_ROW + 1;
             END IF;
         END IF;
-
+	IF :transaction_type = 'A' THEN
         IF Suffix LIKE 'SPO%' AND ItemClass = '2' THEN
             error := -40015;
             error_message := N'You have selected a Service Series. Please select a Service item at row ' || MIN_ROW + 1;
         END IF;
 
-        IF Suffix LIKE 'PO%' AND ItemClass = '1' AND SeriesName like 'DM%' THEN
+        IF Suffix LIKE 'PO%' AND ItemClass = '1' THEN
             error := -40016;
             error_message := N'You have selected a Material Series. Please select a Material item at row ' || MIN_ROW + 1;
         END IF;
-
+    END IF;
         SELECT COUNT(*) INTO TempCounter FROM DUMMY WHERE ItemCode LIKE '%RM%' OR ItemCode LIKE '%FG%' OR ItemCode LIKE '%TR%';
         IF TempCounter > 0 THEN
             IF IFNULL(PackingType, '') = '' THEN
@@ -2465,17 +2465,17 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
                 error := -40040;
                 error_message := N'select NA as base type at row ' || MIN_ROW + 1;
             END IF;
-
+		IF :transaction_type = 'A' THEN
             IF Suffix LIKE 'SPO%' AND ItemClass = '2' THEN
                 error := -40041;
                 error_message := N'You have selected a Service Series. Please select a Service item at row ' || MIN_ROW + 1;
             END IF;
 
-            IF Suffix LIKE 'PO%' AND ItemClass = '1' AND SeriesName like 'DM%' THEN
+            IF Suffix LIKE 'PO%' AND ItemClass = '1' THEN
                 error := -40042;
                 error_message := N'You have selected a Material Series. Please select a Material item at row ' || MIN_ROW + 1;
             END IF;
-
+    	END IF;
             SELECT COUNT(*) INTO TempCounter FROM DUMMY WHERE ItemCode LIKE '%RM%' OR ItemCode LIKE '%FG%' OR ItemCode LIKE '%TR%';
             IF TempCounter > 0 THEN
                 IF IFNULL(PackingType, '') = '' THEN
@@ -4551,7 +4551,7 @@ End If;
 ----------------------------------------------
 -- FORM Name   : Delivery
 -- Note        : This SP will restrict user to create Delivery after 6:15 PM.
-IF object_type = '15' AND (:transaction_type ='A' ) THEN
+/*IF object_type = '15' AND (:transaction_type ='A' ) THEN
 DECLARE tim varchar(50);
 DECLARE Series varchar(50);
 	(select "CreateTS" into tim from ODLN WHERE "DocEntry" = list_of_cols_val_tab_del);
@@ -4573,7 +4573,7 @@ DECLARE Series varchar(50);
 			error :=73;
 			error_message := N'Not allowed to enter after 6:15 PM..';
 		END IF;
-END IF;
+END IF;*/
 
 ----------------------------------------
 IF object_type = '15' AND (:transaction_type = 'A') THEN
@@ -9332,7 +9332,7 @@ DECLARE MaxPR int;
 	END WHILE;
 END IF;
 
-/*IF object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U')   THEN
+IF object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U')   THEN
 Declare ICode Nvarchar(150);
 Declare Iname Nvarchar(500);
 Declare Srs Nvarchar(150);
@@ -9374,7 +9374,7 @@ DECLARE MaxGI int;
 	     	END IF;
 	     MinGI=MinGI+1;
 		END WHILE;
-END IF;*/
+END IF;
 
 IF object_type = '59' AND (:transaction_type = 'A')  THEN
 Declare ICode Nvarchar(150);
@@ -17259,14 +17259,12 @@ END IF;
 
 
 IF Object_type = '112' and (:transaction_type ='A') Then
-
 Declare dayss int;
 Declare foter nvarchar(250);
 Declare Srs nvarchar(250);
 Declare Base int;
 (SELECT ODRF."ObjType" into DraftObj FROM ODRF WHERE ODRF."DocEntry"=:list_of_cols_val_tab_del );
-if DraftObj = 13
-THEN
+if DraftObj = 13 THEN
 	select distinct DAYS_BETWEEN(t4."DocDate",CURRENT_DATE) into dayss from ODRF t4 where  t4."DocEntry"=list_of_cols_val_tab_del and T4."ObjType"=13;
 	select t5."SeriesName" into Srs from ODRF t4 INNER JOIN NNM1 t5 ON t5."Series" = t4."Series" where  t4."DocEntry"=list_of_cols_val_tab_del and T4."ObjType"=13;
 
@@ -20907,7 +20905,7 @@ IF Object_type = '112' and (:transaction_type ='A' OR :transaction_type ='U' ) T
 	end if;
 End If;
 
-/*IF object_type = '20' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+IF object_type = '20' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
 	DECLARE MinGRN INT;
     DECLARE MaxGRN INT;
     DECLARE CurrentItemCode NVARCHAR(50);
@@ -20977,7 +20975,7 @@ End If;
 			END WHILE;
 		end if;
 	END IF;
-END IF;*/
+END IF;
 
 IF Object_type = '112' and (:transaction_type ='A' or :transaction_type ='U' ) Then
 	DECLARE FromWhs NVARCHAR(15);
@@ -22759,7 +22757,7 @@ IF object_type = '20' AND (:transaction_type = 'U') THEN
         T1."U_UNE_QTY", T0."U_UNE_GEDT", T0."U_UNE_VehicleNo", T1."U_PTYPE", T0."BPLId", T0."U_WeighOut";
 
     -- 2. New Condition: Only validate if Packing Type is TANKER% and WeighOut is No
-    IF UPPER(:GRN_PType) LIKE 'TANKER%' AND :WeighOut = 'No' THEN
+    IF UPPER(:GRN_PType) LIKE 'TANKER%' AND :WeighOut = 'No' AND GRN_BPLId = 4 THEN
 
         -- Existing validation logic starts here
         IF :GRN_SlipNo_Num > 0 THEN

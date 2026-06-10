@@ -1869,10 +1869,10 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
 	            error_message := N'You have selected a Service Series. Please select a Service item at row ' || MIN_ROW + 1;
     	    END IF;
 
-        	/*IF Suffix LIKE 'PO%' AND ItemClass = '1' AND SeriesName like 'DM%' THEN
+        	IF Suffix LIKE 'PO%' AND ItemClass = '1' AND SeriesName like 'DM%' THEN
             	error := -40016;
 	            error_message := N'You have selected a Material Series. Please select a Material item at row ' || MIN_ROW + 1;
-    	    END IF;*/
+    	    END IF;
         END IF;
 
         SELECT COUNT(*) INTO TempCounter FROM DUMMY WHERE ItemCode LIKE '%RM%' OR ItemCode LIKE '%FG%' OR ItemCode LIKE '%TR%';
@@ -1971,11 +1971,6 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
         error := -40026;
         error_message := N'Please add a mobile number to the Business Partner Master Data.';
     END IF;
-
-    /*IF (VendorCode = 'VPRD0016' AND PaymentTerm NOT IN ('60 Days', '45 Days PDC')) OR (VendorCode <> 'VPRD0016' AND PaymentTerm <> BpPaymentTerm) THEN
-        error := -40027;
-        error_message := N'Payment term does not match the Business Partner Master record.';
-    END IF;*/
 
     IF IFNULL(DeliveryTerm,'') NOT IN ('CIF ICD Ahmedabad', 'CIF Hazira','CIF Mundra', 'CIF Nhava sheva', 'CIF Pipavav', 'CIP Mundra', 'CIP Nhava Sheva', 'Ex  work', 'CIF Nhavasheva/ Pipavav', 'CIF Nhavasheva/ Mundra', 'CIF Mundra / Pipavav', 'Delivered rate', 'CIP ICD Ahmedabad', 'CFR Nhava Sheva', 'DAP Mundra', 'DAP Vatva', 'DAP HO', 'DAP Saykha', 'CIP Mumbai airport') THEN
         error := -40028;
@@ -8543,7 +8538,6 @@ If object_type = '13' and (:transaction_type = 'A' OR :transaction_type = 'U') t
 END IF;
 
 IF Object_type = '13' and (:transaction_type ='A') Then
-
 Declare dayss int;
 Declare foter nvarchar(250);
 Declare Srs nvarchar(250);
@@ -8558,8 +8552,8 @@ Declare Base int;
 		End If;
 
 END IF;
-IF Object_type = '67' and (:transaction_type ='A' OR :transaction_type ='U') Then
 
+IF Object_type = '67' and (:transaction_type ='A' OR :transaction_type ='U') Then
 Declare dayss int;
 Declare foter nvarchar(250);
 Declare Base int;
