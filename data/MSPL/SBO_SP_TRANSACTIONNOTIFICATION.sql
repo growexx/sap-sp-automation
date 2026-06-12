@@ -20,7 +20,7 @@ error_message := N'Ok';
 -- CONSOLIDATED ITEM MASTER VALIDATION
 -- Object_type = '4' (Item Master)
 ------------------------------ ITEM MASTER --------------------------------------------
-IF Object_type = '4' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+/*IF Object_type = '4' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
     DECLARE ValidFor1 nvarchar(50);
     DECLARE UsrCod nvarchar(50);
     DECLARE ItemCode nvarchar(50);
@@ -95,7 +95,7 @@ IF Object_type = '4' AND (:transaction_type = 'A' OR :transaction_type = 'U') TH
 		error :=-10009;
 	    error_message := N'Please enter MILLP (Matangi) Item Code.';
 	END IF;
-END IF;
+END IF;*/
 ----------------------Item Master Validation close----------------------------
 -- CONSOLIDATED BUSINESS PARTNER VALIDATION
 -- Object_type = '2' (Business Partner)

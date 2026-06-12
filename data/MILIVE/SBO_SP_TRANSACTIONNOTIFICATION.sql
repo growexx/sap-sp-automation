@@ -20783,11 +20783,11 @@ DECLARE BaseTypee int;
 	(SELECT T0."WhsCode" into IssueWhsCode FROM IGE1 T0 WHERE T0."DocEntry"= :list_of_cols_val_tab_del and T0."VisOrder" = MinIn);
 
 	IF ProdType = 'S' then
-	  	IF (IssueItemCode like 'OF%' and IssueWhsCode not in ('OF-RAW')) then
+	  	IF (IssueItemCode like 'OFRM%' and IssueWhsCode not in ('OF-RAW')) then
 				error := -1116;
 				error_message := N'Please Select OF-RAW Warehouse for OF Materials.';
 		END IF;
-		IF (IssueWhsCode = 'OF-RAW' and IssueItemCode not like 'OF%') then
+		IF (IssueWhsCode = 'OF-RAW' and IssueItemCode not like 'OFRM%') then
 				error := -1117;
 				error_message := N'Please Select Warehouse other than OF-RAW.';
 		END IF;
