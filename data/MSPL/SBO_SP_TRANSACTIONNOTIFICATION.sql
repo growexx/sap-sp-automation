@@ -20,7 +20,7 @@ error_message := N'Ok';
 -- CONSOLIDATED ITEM MASTER VALIDATION
 -- Object_type = '4' (Item Master)
 ------------------------------ ITEM MASTER --------------------------------------------
-/*IF Object_type = '4' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+IF Object_type = '4' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
     DECLARE ValidFor1 nvarchar(50);
     DECLARE UsrCod nvarchar(50);
     DECLARE ItemCode nvarchar(50);
@@ -95,7 +95,7 @@ error_message := N'Ok';
 		error :=-10009;
 	    error_message := N'Please enter MILLP (Matangi) Item Code.';
 	END IF;
-END IF;*/
+END IF;
 ----------------------Item Master Validation close----------------------------
 -- CONSOLIDATED BUSINESS PARTNER VALIDATION
 -- Object_type = '2' (Business Partner)
@@ -190,7 +190,7 @@ IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
     -- ─────────────────────────────────────────────────────────────
     -- DUPLICATE GST CHECK — Vendor
     -- ─────────────────────────────────────────────────────────────
-    /*IF CardType = 'S' AND :list_of_cols_val_tab_del LIKE 'V%'
+    IF CardType = 'S' AND :list_of_cols_val_tab_del LIKE 'V%'
                       AND :list_of_cols_val_tab_del NOT LIKE 'V__I%' THEN
         IF EXISTS (
             SELECT 1 FROM CRD1 T0
@@ -209,7 +209,7 @@ IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
             error := -20021;
             error_message := N'Duplicate GST Number found in an Active Pay-to address of another Vendor.';
         END IF;
-    END IF;*/
+    END IF;
 
     -- ─────────────────────────────────────────────────────────────
     -- DUPLICATE FOREIGN NAME — Employee
@@ -1539,7 +1539,7 @@ IF Object_type = '17' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
         END IF;
 
         -- Validation 32033: Customer and Item Type Matching
-        SELECT CASE WHEN SOItemCode LIKE 'PC%' THEN 'PC' WHEN SOItemCode LIKE 'DI%' THEN 'SC' WHEN SOItemCode LIKE 'OF%' THEN 'OF' END INTO ItemCodeType FROM dummy;
+        SELECT CASE WHEN SOItemCode LIKE 'PC%' THEN 'PC' WHEN SOItemCode LIKE 'SC%' THEN 'SC' WHEN SOItemCode LIKE 'OF%' THEN 'OF' END INTO ItemCodeType FROM dummy;
         IF SOItemGrpCode NOT IN (104, 101) THEN
             IF (SOItemCode LIKE 'PC%' AND CardCode NOT LIKE 'CP%') OR (SOItemCode LIKE 'SC%' AND CardCode NOT LIKE 'CS%') OR (SOItemCode LIKE 'OF%' AND CardCode NOT LIKE 'CO%') THEN
                 error := 32033;
@@ -1887,7 +1887,7 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             END IF;
         END IF;
 
-        IF BaseDocEntry IS NOT NULL THEN
+        /*IF BaseDocEntry IS NOT NULL THEN
             SELECT DAYS_BETWEEN(T1."DocDate", DocDate) INTO DaysDifference FROM OPRQ T1
             INNER JOIN PRQ1 T2 ON T1."DocEntry" = T2."DocEntry"
             INNER JOIN POR1 T3 ON T2."DocEntry" = T3."BaseEntry" AND T2."LineNum" = T3."BaseLine"
@@ -1901,7 +1901,7 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
                 error := -40020;
                 error_message := N'PO not allowed to enter less than PR date.';
             END IF;
-        END IF;
+        END IF;*/
 
         IF PlaceOfSupply <> ShipToState AND TaxCode NOT LIKE 'IGST%' THEN
             error := -40061;
@@ -3211,7 +3211,7 @@ DECLARE JWChallan3 Int;
 END IF;
 ----------------------Goods issue-------------------
 ----------------UNIT-I
-/*IF object_type = '60' AND (:transaction_type = 'A') THEN
+IF object_type = '60' AND (:transaction_type = 'A') THEN
 DECLARE MinGI Int;
 DECLARE MaxGI Int;
 DECLARE WhsGI Nvarchar(50);
@@ -3263,7 +3263,7 @@ DECLARE JrnlMemo Nvarchar(50);
 		MinGI := MinGI+1;
 	END WHILE;
 	END IF;
-END IF;*/
+END IF;
 ------------------Issue for prodcution-------
 ----------Unit-I--------
 
@@ -5644,31 +5644,31 @@ END IF;
 
 ------------------Gate pass------------------------------
 
-If Object_Type = 'GPass' and (:transaction_type='U') then
+/*If Object_Type = 'GPass' and (:transaction_type='U') then
 Declare Status  Nvarchar(50);
 SELECT "Status" Into Status  FROM "@GPHR" T0 WHERE T0."DocEntry" = list_of_cols_val_tab_del;
 		if  Status = 'C' then
         	error :=110;
         	error_message := N'Gate pass is Closed';
 		end if;
-end if;
+end if;*/
 
 ----------------------------------------------------
 -- FORM Name   : GATE PASS
 -- Added Date  :
 -- Note        : This SP will not allow to cancel or close Gate Pass Entry.
 
-IF object_type = 'GPass' AND (:transaction_type = 'C' OR :transaction_type = 'L')   THEN
+/*IF object_type = 'GPass' AND (:transaction_type = 'C' OR :transaction_type = 'L')   THEN
 DECLARE Creator nvarchar(50);
  	SELECT T0."Creator" Into Creator  FROM "@GPHR" T0 WHERE T0."DocEntry" = list_of_cols_val_tab_del;
 		IF (Creator <> 'manager') THEN
 			error := 110;
 			error_message := 'You are not allowed to cancel/close the document';
 		END IF;
-END IF;
+END IF;*/
 
 ------------------------------------------------
-If Object_Type = 'GPass' and (:transaction_type='A' OR :transaction_type='U') then
+/*If Object_Type = 'GPass' and (:transaction_type='A' OR :transaction_type='U') then
 Declare Onhand  Int;
 Declare Code  varchar(50);
 Declare Srs  varchar(50);
@@ -5760,7 +5760,7 @@ Declare Srss Nvarchar(50);
 	   	error_message := N'NRGP gate pass is stopped';
 	END IF;
 end if;
-
+*/
 -----------------------------------
 IF object_type = '202' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
 DECLARE MinPRO Int;
@@ -6479,7 +6479,7 @@ If object_type = '18' and (:transaction_type = 'A' OR :transaction_type = 'U') t
 	END WHILE;
 END IF;
 
-/*IF object_type = '18' AND (:transaction_type = 'A' Or :transaction_type = 'U') THEN
+IF object_type = '18' AND (:transaction_type = 'A' Or :transaction_type = 'U') THEN
 
 DECLARE APQTD Int;
 DECLARE MinLineAPQ Int;
@@ -6514,7 +6514,7 @@ DECLARE DocTyp varchar(50);
 			MinLineAPQ := MinLineAPQ+1;
 		END WHILE;
 	END IF;
-END IF;*/
+END IF;
 ------------------------------------------------------
 ---------Only QC dept can transfer material from QC warehouse------------
 IF Object_type = '67' and (:transaction_type ='A' OR :transaction_type ='U') Then

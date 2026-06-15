@@ -1135,7 +1135,7 @@ IF SOPallet = 'NA'
     error_message := N'Pallet Code is mandatory when Packing Type is other than IBC Tank, ISO Tank, Tanker, or Loose.';
 END IF;
 
-/*IF (:transaction_type = 'A') THEN
+IF (:transaction_type = 'A') THEN
 IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
 
         -- VALIDATION 1: ItemCode prefix must match Distribution Rule suffix
@@ -1176,9 +1176,9 @@ IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
                 END IF;
             END IF;
          END IF;
-         END IF;*/
+         END IF;
 
-        /*IF CardCode LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
+        IF CardCode LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
 			-- 1. EXW (Ex-Works) Validation
 			-- Rule: ONLY Ex-Work is allowed. FOB and Freight MUST be blank.
 			IF (IncoTerm = 'EXW') AND (IFNULL(ExWorkPriceKG, 0.000) = 0.000 OR IFNULL(FOBPriceKG, 0.000) <> 0.000 OR IFNULL(FreightPriceKG, 0.000) <> 0.000) THEN
@@ -1206,7 +1206,7 @@ IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
 			    error := 30095;
 			    error_message := N'For Incoterm ' || IncoTerm || ', both FOB and Freight fields are mandatory at line - ' || MinSO+1;
 			END IF;
-		END IF;*/
+		END IF;
 
         MinSO := MinSO + 1;
     END WHILE;
@@ -1815,7 +1815,7 @@ IF SOPallet = 'NA'
     error_message := N'Pallet Code is mandatory when Packing Type is other than IBC Tank, ISO Tank, Tanker, or Loose.';
 END IF;
 
-/*IF (:transaction_type = 'A') THEN
+IF (:transaction_type = 'A') THEN
 IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
 
         -- VALIDATION 1: ItemCode prefix must match Distribution Rule suffix
@@ -1856,9 +1856,9 @@ IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
                 END IF;
             END IF;
             END IF;
-         END IF;*/
+         END IF;
 
-         	/*IF CardCodeSO LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
+         	IF CardCodeSO LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
 				-- 1. EXW (Ex-Works) Validation
 				-- Rule: ONLY Ex-Work is allowed. FOB and Freight MUST be blank.
 				IF (IncoTerm = 'EXW') AND (IFNULL(ExWorkPriceKG, 0.000) = 0.000 OR IFNULL(FOBPriceKG, 0.000) <> 0.000 OR IFNULL(FreightPriceKG, 0.000) <> 0.000) THEN
@@ -1886,7 +1886,7 @@ IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
 				    error := 30095;
 				    error_message := N'For Incoterm ' || IncoTerm || ', both FOB and Freight fields are mandatory at line - ' || MinSO+1;
 				END IF;
-			END IF;*/
+			END IF;
             -- Increment loop counter
             MinSO := MinSO + 1;
         END WHILE;
