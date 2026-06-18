@@ -5138,7 +5138,7 @@ DECLARE Branch Int;
 				SELECT PDN1."WhsCode" into WhseGRN FROM PDN1 WHERE PDN1."DocEntry" = list_of_cols_val_tab_del and PDN1."VisOrder"=MinGRN;
 				SELECT PDN1."ItemCode" into ItemGRN FROM PDN1 WHERE PDN1."DocEntry" = list_of_cols_val_tab_del and PDN1."VisOrder"=MinGRN;
 
-				IF ItemGRN LIKE '%FG%' and (WhseGRN NOT LIKE '%TR%' and WhseGRN NOT LIKE '%OF%') THEN
+				IF ItemGRN LIKE '%FG%' and not (WhseGRN LIKE '%TR%' OR WhseGRN LIKE '%OF%') THEN
 					error :=8511;
 					error_message := N'Please Enter Proper Warehouse.FG.';
 				END IF;
@@ -14713,7 +14713,7 @@ if DraftObj = 20 THEN
 				SELECT DRF1."WhsCode" into WhseGRN FROM DRF1 WHERE DRF1."DocEntry" = list_of_cols_val_tab_del and DRF1."VisOrder"=MinGRN;
 				SELECT DRF1."ItemCode" into ItemGRN FROM DRF1 WHERE DRF1."DocEntry" = list_of_cols_val_tab_del and DRF1."VisOrder"=MinGRN;
 
-				IF ItemGRN LIKE '%FG%' and (WhseGRN NOT LIKE '%TR%' and WhseGRN NOT LIKE '%OF%')  THEN
+				IF ItemGRN LIKE '%FG%' and (WhseGRN NOT LIKE '%TR%' OR WhseGRN NOT LIKE '%OF%')  THEN
 					error :=8511;
 					error_message := N'Please Enter Proper Warehouse.FG.';
 				END IF;

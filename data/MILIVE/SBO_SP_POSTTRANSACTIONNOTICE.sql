@@ -767,6 +767,12 @@ IF (:object_type = '17' AND (:transaction_type IN ('A','U'))) THEN
 	FROM ORDR T0 INNER JOIN OCRD T1 ON T0."CardCode" = T1."CardCode" INNER JOIN OSLP T2 ON T1."SlpCode" = T2."SlpCode"
 	WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
 
+	IF :EmailCC IS NULL OR :EmailCC = '' THEN
+            EmailCC := 'bde1@matangiindustries.com';
+        ELSE
+            EmailCC := :EmailCC || ',bde1@matangiindustries.com';
+    END IF;
+
 			Mobile := '';
 			EmailBCC := 'sap1@matangiindustries.com,sap2@matangiindustries.com,sap@matangiindustries.com';
 			ObjectType :='M';
@@ -789,6 +795,12 @@ IF (:object_type = '17' AND (:transaction_type IN ('A','U'))) THEN
 	SELECT T2."Email", T2."Memo" INTO MailID, EmailCC
 	FROM ORDR T0 INNER JOIN OCRD T1 ON T0."CardCode" = T1."CardCode" INNER JOIN OSLP T2 ON T1."SlpCode" = T2."SlpCode"
 	WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
+
+	IF :EmailCC IS NULL OR :EmailCC = '' THEN
+            EmailCC := 'bde1@matangiindustries.com';
+        ELSE
+            EmailCC := :EmailCC || ',bde1@matangiindustries.com';
+    END IF;
 
 			Mobile := '';
 			EmailBCC := 'sap1@matangiindustries.com,sap2@matangiindustries.com,sap@matangiindustries.com';
@@ -813,6 +825,12 @@ IF (:object_type = '17' AND (:transaction_type IN ('A','U'))) THEN
 	SELECT T2."Email", T2."Memo" INTO MailID, EmailCC
 	FROM ORDR T0 INNER JOIN OCRD T1 ON T0."CardCode" = T1."CardCode" INNER JOIN OSLP T2 ON T1."SlpCode" = T2."SlpCode"
 	WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
+
+	IF :EmailCC IS NULL OR :EmailCC = '' THEN
+            EmailCC := 'bde1@matangiindustries.com';
+        ELSE
+            EmailCC := :EmailCC || ',bde1@matangiindustries.com';
+    END IF;
 
 			Mobile := '';
 			EmailBCC := 'sap1@matangiindustries.com,sap2@matangiindustries.com,sap@matangiindustries.com';

@@ -2791,7 +2791,7 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
 			SELECT COUNT(T0."DocEntry") INTO TEMP_COUNTER FROM OPRQ T0 Inner Join PRQ1 T1 on T0."DocEntry"=T1."DocEntry"
 			Inner Join NNM1 T2 on T0."Series"=T2."Series"
 			Inner Join OWHS T3 on T1."WhsCode"=T3."WhsCode"
-			WHERE ifnull(T1."U_CapxOpex",'')='' and T2."SeriesName" like 'EG%' and T1."VisOrder"=MIN_ROW and T0."DocEntry" = :list_of_cols_val_tab_del;
+			WHERE UPPER(IFNULL(T1."U_CapxOpex", '')) != UPPER(IFNULL(T3."U_CapxOpex", '')) and T2."SeriesName" like 'EG%' and T1."VisOrder"=MIN_ROW and T0."DocEntry" = :list_of_cols_val_tab_del;
 
 			(select (case when ifnull("U_CapxOpex",'')='capx' then 'Capex' when ifnull("U_CapxOpex",'')='opex' then 'Opex' end) into Typ from PRQ1 where "DocEntry" = :list_of_cols_val_tab_del and "VisOrder"=MIN_ROW);
 
@@ -2953,7 +2953,7 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 				SELECT COUNT(T0."DocEntry") INTO TEMP_COUNTER FROM ODRF T0 Inner Join DRF1 T1 on T0."DocEntry"=T1."DocEntry"
 				Inner Join NNM1 T2 on T0."Series"=T2."Series"
 				Inner Join OWHS T3 on T1."WhsCode"=T3."WhsCode"
-				WHERE ifnull(T1."U_CapxOpex",'')='' and T2."SeriesName" like 'EG%' and T1."VisOrder"=MIN_ROW and T0."DocEntry" = :list_of_cols_val_tab_del and T0."ObjType"='1470000113';
+				WHERE UPPER(IFNULL(T1."U_CapxOpex", '')) != UPPER(IFNULL(T3."U_CapxOpex", '')) and T2."SeriesName" like 'EG%' and T1."VisOrder"=MIN_ROW and T0."DocEntry" = :list_of_cols_val_tab_del and T0."ObjType"='1470000113';
 
 				(select (case when ifnull("U_CapxOpex",'')='capx' then 'Capex' when ifnull("U_CapxOpex",'')='opex' then 'Opex' end) into Typ from DRF1 T0 JOIN ODRF T1 on T0."DocEntry"=T1."DocEntry" where T0."DocEntry" = :list_of_cols_val_tab_del and T0."VisOrder"=MIN_ROW and T1."ObjType"='1470000113');
 
@@ -4967,7 +4967,8 @@ DECLARE Series Nvarchar(50);
 
 			IF ItemGR LIKE 'PCFG%' and WhsGR NOT LIKE '%QC' and ItemGR <> 'PCFG0263'
 				and ItemGR <> 'PCFG0316' and ItemGR <> 'PCFG0309' and ItemGR <> 'PCFG0308' and ItemGR <> 'PCFG0307' and ItemGR <> 'PCFG0306' and ItemGR <> 'PCFG0515'
-				and ItemGR <> 'PCFG0305' and ItemGR <> 'DIFG0017' and ItemGR <> 'PCFG0250' AND ItemGR <> 'PCFG0606' AND ItemGR <> 'PCFG0381' AND ItemGR <> 'PCFG0223' THEN
+				and ItemGR <> 'PCFG0305' and ItemGR <> 'DIFG0017' and ItemGR <> 'PCFG0250' AND ItemGR <> 'PCFG0606' AND ItemGR <> 'PCFG0381' AND ItemGR <> 'PCFG0223'
+				AND ItemGR <> 'PCFG0480' THEN
 				error :=-9001;
 				error_message := N'Please Enter Proper Warehouse..';
 			END IF;
