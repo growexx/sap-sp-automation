@@ -10414,10 +10414,10 @@ DECLARE MaxGI int;
 			     	End If;
 
 
-			     	IF ICode LIKE '%RM%'AND ICode <> 'SCRM0016' AND ICode <> 'PCRM0017' AND ICode <> 'SCRM0025' THEN
+			     	/*IF ICode LIKE '%RM%'AND ICode <> 'SCRM0016' AND ICode <> 'PCRM0017' AND ICode <> 'SCRM0025' THEN
 				    	error :=287;
 				        error_message := N'Not allowed to issue RM directly. Contact SAP team';
-			     	End If;
+			     	End If;*/
 
 			     	IF ICode LIKE '%FG%' THEN
 				    	error :=287;
@@ -21940,6 +21940,7 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
     DECLARE v_Batch NVARCHAR(25);
     DECLARE v_InvExists NVARCHAR(25);
     DECLARE v_AirBillNo NVARCHAR(25);
+    DECLARE v_Division NVARCHAR(5);
 
     -- NEW: Declarations for RTO Validation fields
     DECLARE v_RTO NVARCHAR(5);
@@ -22014,10 +22015,10 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
         -- Retrieve values from QUT1 for mandatory fields for the current row (UPDATED WITH NEW FIELDS)
         SELECT T1."U_UNE_ITCD", T1."U_FRTXT", T1."U_PR_Type", T1."TaxCode", T1."U_Department",
                T1."U_ResFrCust", T1."U_ReasonFail", T1."U_Deal_ID", T1."U_ApprOnCOA", T1."U_PSS",
-               T1."U_NoOfBatchRequired", T1."U_RTO", T1."U_ResDate", T1."U_OrderRec", T1."U_OrderDate", t1."U_AirBillNo", T1."ItemCode"
+               T1."U_NoOfBatchRequired", T1."U_RTO", T1."U_ResDate", T1."U_OrderRec", T1."U_OrderDate", t1."U_AirBillNo", T1."ItemCode", t1."U_Division"
         INTO v_U_UNE_ITCD, v_U_FRTXT, v_U_PR_TYPE, v_TaxCode, v_Department,
              v_ResFrCust, v_ReasonFail, v_DealNo, v_ApprCOA, v_PSS,
-             v_Batch, v_RTO, v_ResDate, v_OrderRec, v_OrderDate, v_AirBillNo, v_ItemCode
+             v_Batch, v_RTO, v_ResDate, v_OrderRec, v_OrderDate, v_AirBillNo, v_ItemCode, v_Division
         FROM QUT1 T1
         WHERE T1."DocEntry" = :list_of_cols_val_tab_del
         AND T1."VisOrder" = v_MINN;
@@ -22083,11 +22084,17 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
             error_message := 'Item Code other than SER0229 not allowed.';
         END IF;
 
+        ---Division must be not null and in PC, SC and OF
+	    IF v_Department = 'RND' and TRIM(IFNULL(v_Division,'')) NOT IN ('PC','SC','OF') THEN
+		        error := -1228;
+		        error_message := N'Division must be PC, SC, or OF.';
+		END IF;
+
         SELECT COUNT(*)
 		INTO v_InvExists
 		FROM INV1 T2
 		WHERE T2."BaseEntry" = :list_of_cols_val_tab_del
-	  	AND T2."BaseLine"  = v_MINN
+	  	--AND T2."BaseLine"  = v_MINN
 	  	AND T2."BaseType"  = 23;
 
         IF v_InvExists = 0

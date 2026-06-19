@@ -912,6 +912,30 @@ If :Temp > 0 then
 	End If;
 End If;
 
+------------------------------------------------RND-OF MOBIALERT----------------------------------
+
+IF (:object_type = '23' AND (:transaction_type = 'A')) THEN
+
+
+select count(*) into Temp from OQUT T0 join QUT1 T1 ON T0."DocEntry" = T1."DocEntry"
+where T0."CANCELED" = 'N' and ifnull(T1."U_Department",'') = 'RND' and ifnull(T1."U_Division",'') = 'OF' and T0."DocEntry" = :list_of_cols_val_tab_del;
+
+If :Temp > 0 then
+
+		SELECT T0."DocEntry" INTO DocEntry FROM OQUT T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del;
+		MailID := 'ogops@minalspecialities.com';
+		Mobile := '';
+		EmailCC := '';
+		EmailBCC := 'sap@matangiindustries.com,sap2@matangiindustries.com,sap1@matangiindustries.com';
+		ObjectType := 'M';
+		Mobi_TYPE := 'Sample Request';
+		Select CURRENT_SCHEMA Into DBName from Dummy;
+		If(:DBName = 'MILIVE') Then
+		CALL "MOBIALERT"."Add_Config_Proc" (459,:DocEntry,:transaction_type,:MailID,:Mobile,:EmailCC,:EmailBCC,:ObjectType,:Mobi_TYPE);
+		END IF;
+	End If;
+End If;
+
 ----------------------------- PR Generated - QuotePilot --------------------------------------------
 IF (:object_type = '1470000113' AND (:transaction_type IN ('A'))) THEN
 

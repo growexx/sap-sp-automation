@@ -2791,7 +2791,7 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
 			SELECT COUNT(T0."DocEntry") INTO TEMP_COUNTER FROM OPRQ T0 Inner Join PRQ1 T1 on T0."DocEntry"=T1."DocEntry"
 			Inner Join NNM1 T2 on T0."Series"=T2."Series"
 			Inner Join OWHS T3 on T1."WhsCode"=T3."WhsCode"
-			WHERE UPPER(IFNULL(T1."U_CapxOpex", '')) != UPPER(IFNULL(T3."U_CapxOpex", '')) and T2."SeriesName" like 'EG%' and T1."VisOrder"=MIN_ROW and T0."DocEntry" = :list_of_cols_val_tab_del;
+			WHERE ifnull(T1."U_CapxOpex",'')='' and T2."SeriesName" like 'EG%' and T1."VisOrder"=MIN_ROW and T0."DocEntry" = :list_of_cols_val_tab_del;
 
 			(select (case when ifnull("U_CapxOpex",'')='capx' then 'Capex' when ifnull("U_CapxOpex",'')='opex' then 'Opex' end) into Typ from PRQ1 where "DocEntry" = :list_of_cols_val_tab_del and "VisOrder"=MIN_ROW);
 
@@ -2953,7 +2953,7 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 				SELECT COUNT(T0."DocEntry") INTO TEMP_COUNTER FROM ODRF T0 Inner Join DRF1 T1 on T0."DocEntry"=T1."DocEntry"
 				Inner Join NNM1 T2 on T0."Series"=T2."Series"
 				Inner Join OWHS T3 on T1."WhsCode"=T3."WhsCode"
-				WHERE UPPER(IFNULL(T1."U_CapxOpex", '')) != UPPER(IFNULL(T3."U_CapxOpex", '')) and T2."SeriesName" like 'EG%' and T1."VisOrder"=MIN_ROW and T0."DocEntry" = :list_of_cols_val_tab_del and T0."ObjType"='1470000113';
+				WHERE ifnull(T1."U_CapxOpex",'')='' and T2."SeriesName" like 'EG%' and T1."VisOrder"=MIN_ROW and T0."DocEntry" = :list_of_cols_val_tab_del and T0."ObjType"='1470000113';
 
 				(select (case when ifnull("U_CapxOpex",'')='capx' then 'Capex' when ifnull("U_CapxOpex",'')='opex' then 'Opex' end) into Typ from DRF1 T0 JOIN ODRF T1 on T0."DocEntry"=T1."DocEntry" where T0."DocEntry" = :list_of_cols_val_tab_del and T0."VisOrder"=MIN_ROW and T1."ObjType"='1470000113');
 
@@ -4967,8 +4967,7 @@ DECLARE Series Nvarchar(50);
 
 			IF ItemGR LIKE 'PCFG%' and WhsGR NOT LIKE '%QC' and ItemGR <> 'PCFG0263'
 				and ItemGR <> 'PCFG0316' and ItemGR <> 'PCFG0309' and ItemGR <> 'PCFG0308' and ItemGR <> 'PCFG0307' and ItemGR <> 'PCFG0306' and ItemGR <> 'PCFG0515'
-				and ItemGR <> 'PCFG0305' and ItemGR <> 'DIFG0017' and ItemGR <> 'PCFG0250' AND ItemGR <> 'PCFG0606' AND ItemGR <> 'PCFG0381' AND ItemGR <> 'PCFG0223'
-				AND ItemGR <> 'PCFG0480' THEN
+				and ItemGR <> 'PCFG0305' and ItemGR <> 'DIFG0017' and ItemGR <> 'PCFG0250' AND ItemGR <> 'PCFG0606' AND ItemGR <> 'PCFG0381' AND ItemGR <> 'PCFG0223' THEN
 				error :=-9001;
 				error_message := N'Please Enter Proper Warehouse..';
 			END IF;
@@ -10570,7 +10569,7 @@ DECLARE DelayRemark Nvarchar(50);
 		SELECT T1."U_RMKSTR" into DelayRemark FROM OINV T1 WHERE T1."DocEntry" = :list_of_cols_val_tab_del;
 
 		IF DelayRemark <> 'Booking pending from forwarder' AND DelayRemark <> 'Container arrange as per planning' AND DelayRemark <> 'FOB shipment' AND DelayRemark <> 'ISO arrange as per planning'
-			AND DelayRemark <> 'LCL shipment' AND DelayRemark <> 'Party asking for late dispatch' then
+			AND DelayRemark <> 'LCL shipment' AND DelayRemark <> 'Party asking for late dispatch' AND DelayRemark <> 'Other' then
 			error :=360;
 			error_message := N'Please select proper Invoie delay remark';
 		END IF;
@@ -21631,6 +21630,7 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
     DECLARE v_Batch NVARCHAR(25);
     DECLARE v_InvExists NVARCHAR(25);
     DECLARE v_AirBillNo NVARCHAR(25);
+    DECLARE v_Division NVARCHAR(5);
 
     -- NEW: Declarations for RTO Validation fields
     DECLARE v_RTO NVARCHAR(5);
@@ -21705,10 +21705,10 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
         -- Retrieve values from QUT1 for mandatory fields for the current row (UPDATED WITH NEW FIELDS)
         SELECT T1."U_UNE_ITCD", T1."U_FRTXT", T1."U_PR_Type", T1."TaxCode", T1."U_Department",
                T1."U_ResFrCust", T1."U_ReasonFail", T1."U_Deal_ID", T1."U_ApprOnCOA", T1."U_PSS",
-               T1."U_NoOfBatchRequired", T1."U_RTO", T1."U_ResDate", T1."U_OrderRec", T1."U_OrderDate", t1."U_AirBillNo", T1."ItemCode"
+               T1."U_NoOfBatchRequired", T1."U_RTO", T1."U_ResDate", T1."U_OrderRec", T1."U_OrderDate", t1."U_AirBillNo", T1."ItemCode", t1."U_Division"
         INTO v_U_UNE_ITCD, v_U_FRTXT, v_U_PR_TYPE, v_TaxCode, v_Department,
              v_ResFrCust, v_ReasonFail, v_DealNo, v_ApprCOA, v_PSS,
-             v_Batch, v_RTO, v_ResDate, v_OrderRec, v_OrderDate, v_AirBillNo, v_ItemCode
+             v_Batch, v_RTO, v_ResDate, v_OrderRec, v_OrderDate, v_AirBillNo, v_ItemCode, v_Division
         FROM QUT1 T1
         WHERE T1."DocEntry" = :list_of_cols_val_tab_del
         AND T1."VisOrder" = v_MINN;
@@ -21773,12 +21773,17 @@ IF (:object_type = '23') AND (:transaction_type IN ('A', 'U')) THEN
             error := -1227;
             error_message := 'Item Code other than SER0248 not allowed.';
         END IF;
+         ---Division must be not null and in PC, SC and OF
+	    IF v_Department = 'RND' and TRIM(IFNULL(v_Division,'')) NOT IN ('PC','SC','OF') THEN
+		        error := -1227;
+		        error_message := N'Division must be PC, SC, or OF.';
+		END IF;
 
         SELECT COUNT(*)
 		INTO v_InvExists
 		FROM INV1 T2
 		WHERE T2."BaseEntry" = :list_of_cols_val_tab_del
-	  	AND T2."BaseLine"  = v_MINN
+	  	--AND T2."BaseLine"  = v_MINN
 	  	AND T2."BaseType"  = 23;
 
         IF v_InvExists = 0
