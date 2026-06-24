@@ -2464,7 +2464,7 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
                 error := -40040;
                 error_message := N'select NA as base type at row ' || MIN_ROW + 1;
             END IF;
-		IF :transaction_type = 'A' THEN
+
             IF Suffix LIKE 'SPO%' AND ItemClass = '2' THEN
                 error := -40041;
                 error_message := N'You have selected a Service Series. Please select a Service item at row ' || MIN_ROW + 1;
@@ -2474,7 +2474,7 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
                 error := -40042;
                 error_message := N'You have selected a Material Series. Please select a Material item at row ' || MIN_ROW + 1;
             END IF;
-    	END IF;
+
             SELECT COUNT(*) INTO TempCounter FROM DUMMY WHERE ItemCode LIKE '%RM%' OR ItemCode LIKE '%FG%' OR ItemCode LIKE '%TR%';
             IF TempCounter > 0 THEN
                 IF IFNULL(PackingType, '') = '' THEN
@@ -21983,9 +21983,7 @@ IF :object_type = '17' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
 	        error := -1229;
 	        error_message := 'Customer Total Quantity must match across all Sales Orders with the same Customer Reference No. ( '|| OtherTotalQty || ' Qty).';
 	    END IF;
-
 	END IF;
-
 END IF;
 
 IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN

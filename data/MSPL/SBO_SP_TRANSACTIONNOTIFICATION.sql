@@ -256,14 +256,14 @@ IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
     -- ─────────────────────────────────────────────────────────────
     -- ACCOUNTS PAYABLE ACCOUNT VALIDATION
     -- ─────────────────────────────────────────────────────────────
-    IF (GroupTypee = '105' AND DebAcct NOT IN ('21000320'))
+    /*IF (GroupTypee = '105' AND DebAcct NOT IN ('21000320'))
     OR (GroupTypee = '103' AND DebAcct NOT IN ('21000315'))
     OR (GroupTypee = '106' AND DebAcct NOT IN ('21003211'))
     OR (GroupTypee = '102' AND DebAcct NOT IN ('11200510'))
     OR (GroupTypee = '104' AND DebAcct NOT IN ('11200520')) THEN
         error := -20000;
         error_message := N'Please select proper Accounts Payable in Business Partner.';
-    END IF;
+    END IF;*/
 
     -- ─────────────────────────────────────────────────────────────
     -- ACTIVE MODE CHECK
