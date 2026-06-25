@@ -2465,12 +2465,12 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
                 error_message := N'select NA as base type at row ' || MIN_ROW + 1;
             END IF;
 
-            IF Suffix LIKE 'SPO%' AND ItemClass = '2' THEN
+            IF SeriesName LIKE 'DS%' AND ItemClass = '2' THEN
                 error := -40041;
                 error_message := N'You have selected a Service Series. Please select a Service item at row ' || MIN_ROW + 1;
             END IF;
 
-            IF Suffix LIKE 'PO%' AND ItemClass = '1' THEN
+            IF SeriesName LIKE 'DM%' AND ItemClass = '1' THEN
                 error := -40042;
                 error_message := N'You have selected a Material Series. Please select a Material item at row ' || MIN_ROW + 1;
             END IF;

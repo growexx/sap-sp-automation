@@ -252,18 +252,17 @@ IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
             error_message := N'Duplicate GST Number found within the same Active Customer Division (CPD/CID/COD).';
         END IF;
     END IF;
-
     -- ─────────────────────────────────────────────────────────────
     -- ACCOUNTS PAYABLE ACCOUNT VALIDATION
     -- ─────────────────────────────────────────────────────────────
-    /*IF (GroupTypee = '105' AND DebAcct NOT IN ('21000320'))
+    IF (GroupTypee = '105' AND DebAcct NOT IN ('20203121'))
     OR (GroupTypee = '103' AND DebAcct NOT IN ('21000315'))
-    OR (GroupTypee = '106' AND DebAcct NOT IN ('21003211'))
-    OR (GroupTypee = '102' AND DebAcct NOT IN ('11200510'))
+    OR (GroupTypee = '106' AND DebAcct NOT IN ('20203120'))
+    OR (GroupTypee = '102' AND DebAcct NOT IN ('10502000'))
     OR (GroupTypee = '104' AND DebAcct NOT IN ('11200520')) THEN
         error := -20000;
         error_message := N'Please select proper Accounts Payable in Business Partner.';
-    END IF;*/
+    END IF;
 
     -- ─────────────────────────────────────────────────────────────
     -- ACTIVE MODE CHECK
@@ -279,7 +278,6 @@ IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
             END IF;
         END IF;
     END IF;
-
     -- ─────────────────────────────────────────────────────────────
     -- CUSTOMER-SPECIFIC VALIDATIONS
     -- ─────────────────────────────────────────────────────────────
@@ -4847,7 +4845,7 @@ Declare OcrCode nvarchar(50);
          End If;
 End If;
 
-----------------------------------------------
+/*----------------------------------------------
 -- FORM Name   : Delivery
 -- Added Date  :
 -- Note        : This SP will restrict user to create Delivery after 6:15 PM.
@@ -4873,7 +4871,7 @@ DECLARE Series varchar(50);
 			error :=73;
 			error_message := N'Not allowed to enter after 6:15 PM..';
 		END IF;
-END IF;
+END IF;*/
 -------------------------------------------------
 IF object_type = '15' AND (:transaction_type = 'A') THEN
 DECLARE entry int;
@@ -20748,7 +20746,7 @@ DECLARE CustRef Nvarchar(200);
 		END IF;
 END IF;
 
-IF object_type = '20' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+/*IF object_type = '20' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
 	DECLARE MinGRN INT;
     DECLARE MaxGRN INT;
     DECLARE CurrentItemCode NVARCHAR(50);
@@ -20818,7 +20816,7 @@ IF object_type = '20' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
 			END WHILE;
 		end if;
 	END IF;
-END IF;
+END IF;*/
 
 IF Object_type = '112' and (:transaction_type ='A' or :transaction_type ='U' ) Then
 	DECLARE FromWhs NVARCHAR(15);
@@ -21368,21 +21366,21 @@ DECLARE BaseTypee int;
 		 (SELECT T0."WhsCode" into ReceiptWhsCode FROM IGN1 T0 WHERE T0."DocEntry"= :list_of_cols_val_tab_del and T0."VisOrder" = MinIn);
 
 			IF ProdType = 'S' then
-			  	IF (ReceiptItemCode in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013') and ReceiptWhsCode not in ('JW-QC', 'OF-PORT')) then
+			  	IF (ReceiptItemCode in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013') and ReceiptWhsCode not in ('JW-QC', 'OF-PORT', 'SC-QC')) then
 						error := -1197;
 						error_message := N'Please select proper Warehouse.';
 				END IF;
-				IF (ReceiptWhsCode in ('JW-QC', 'OF-PORT') and ReceiptItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013')) then
+				IF (ReceiptWhsCode in ('JW-QC', 'OF-PORT', 'SC-QC') and ReceiptItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013')) then
 						error := -1198;
 						error_message := N'Please select proper Item.';
 				END IF;
 			END IF;
 			IF ProdType = 'P' then
-			  	IF (ReceiptItemCode in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013') and ReceiptWhsCode not in ('JW-QC','OF-PT-DI')) then
+			  	IF (ReceiptItemCode in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013') and ReceiptWhsCode not in ('JW-QC','OF-PT-DI', 'SC-QC')) then
 						error := -1199;
 						error_message := N'Please select proper Warehouse.';
 				END IF;
-				IF (ReceiptWhsCode in ('JW-QC','OF-PT-DI') and ReceiptItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013', 'SCFG0020')) then
+				IF (ReceiptWhsCode in ('JW-QC','OF-PT-DI', 'SC-QC') and ReceiptItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013', 'SCFG0020')) then
 						error := -1200;
 						error_message := N'Please select proper Item.';
 				END IF;
@@ -21430,21 +21428,21 @@ DECLARE ProdOrderType nvarchar(50);
 
 
 	IF ProdOrderType = 'S' then
-	  	IF (ProdOrderItemCode in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','SCFG0020') and ProdOrderWhsCode not in ('JW-QC', 'OF-PORT')) then
+	  	IF (ProdOrderItemCode in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','SCFG0020') and ProdOrderWhsCode not in ('JW-QC', 'OF-PORT', 'SC-QC')) then
 				error := -1203;
 				error_message := N'Please select proper Warehouse.';
 		END IF;
-		IF (ProdOrderWhsCode in ('JW-QC', 'OF-PORT') and ProdOrderItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','SCFG0020')) then
+		IF (ProdOrderWhsCode in ('JW-QC', 'OF-PORT', 'SC-QC') and ProdOrderItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','SCFG0020')) then
 				error := -1204;
 				error_message := N'Please select proper Item.';
 		END IF;
 	END IF;
 	IF ProdOrderType = 'P' then
-	  	IF (ProdOrderItemCode in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','SCFG0020') and ProdOrderWhsCode not in ('JW-QC','OF-PT-DI')) then
+	  	IF (ProdOrderItemCode in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','SCFG0020') and ProdOrderWhsCode not in ('JW-QC','OF-PT-DI', 'SC-QC')) then
 				error := -1205;
 				error_message := N'Please select proper Warehouse.';
 		END IF;
-		IF (ProdOrderWhsCode in ('JW-QC','OF-PT-DI') and ProdOrderItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','SCFG0020')) then
+		IF (ProdOrderWhsCode in ('JW-QC','OF-PT-DI', 'SC-QC') and ProdOrderItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','SCFG0020')) then
 				error := -1206;
 				error_message := N'Please select proper Item.';
 		END IF;
