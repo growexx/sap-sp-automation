@@ -2249,10 +2249,10 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
         END IF;
     END IF;
 
-    /*SELECT COUNT(*) INTO IsRM FROM POR1 T0
+    SELECT COUNT(*) INTO IsRM FROM POR1 T0
     WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ItemCode" LIKE '%RM%';
 
-    IF IsRM > 0 AND DocDate >= '2026-06-09' THEN
+    IF IsRM > 0 AND DocDate >= '2026-07-03' THEN
         SELECT MAX(T0."ShipDate") INTO MaxShipDate
         FROM POR1 T0
         WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
@@ -2263,7 +2263,7 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             error_message := N'The Maximum Row Delivery Date (' || TO_VARCHAR(:MaxShipDate, 'YYYY-MM-DD') ||
                              N') must exactly match the Header Delivery Date (' || TO_VARCHAR(:DeliveryDate, 'YYYY-MM-DD') || N').';
         END IF;
-    END IF;*/
+    END IF;
 END IF;
 
 
@@ -2623,12 +2623,11 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
                 error_message := 'PO cannot be created without a PR for raw materials.';
             END IF;
         END IF;
-    END IF;
 
-    /*SELECT COUNT(*) INTO IsRM FROM DRF1 T0 JOIN ODRF T1 on T0."DocEntry" = T1."DocEntry"
+        SELECT COUNT(*) INTO IsRM FROM DRF1 T0 JOIN ODRF T1 on T0."DocEntry" = T1."DocEntry"
     WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ItemCode" LIKE '%RM%' AND T1."ObjType" = 22;
 
-    IF IsRM > 0 AND DocDate >= '2026-06-09' THEN
+    IF IsRM > 0 AND DocDate >= '2026-07-03' THEN
         SELECT MAX(T0."ShipDate") INTO MaxShipDate
         FROM DRF1 T0 JOIN ODRF T1 on T0."DocEntry" = T1."DocEntry"
         WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T1."ObjType" = 22;
@@ -2639,7 +2638,10 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
             error_message := N'The Maximum Row Delivery Date (' || TO_VARCHAR(:MaxShipDate, 'YYYY-MM-DD') ||
                              N') must exactly match the Header Delivery Date (' || TO_VARCHAR(:DeliveryDate, 'YYYY-MM-DD') || N').';
         END IF;
-    END IF;*/
+    END IF;
+    END IF;
+
+
 END IF;
 
 --------------------------------------- END OF PURCHASE ORDER ------------------------------------------
@@ -2672,6 +2674,12 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
 	DECLARE ReqDate DATE;
 	DECLARE TaxDate DATE;
     DECLARE Typ NVARCHAR(250);
+    DECLARE MaxShipDate DATE;
+    DECLARE IsRM INT;
+    DECLARE DeliveryDate DATE;
+    DECLARE RM_COUNT INT;
+    DECLARE PM_COUNT INT;
+    DECLARE DIV_COUNT INT;
 
 	-- Header-Level Validations
 	-----------------------------------------------------------------------------------
@@ -2714,8 +2722,8 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
 
 	-- Row-Level Validations (Unified Loop)
 	-----------------------------------------------------------------------------------
-	SELECT T0."BPLId", T1."SeriesName"
-	INTO DocBPLId, SeriesName
+	SELECT T0."BPLId", T1."SeriesName", T0."ReqDate"
+	INTO DocBPLId, SeriesName, DeliveryDate
 	FROM OPRQ T0
 	INNER JOIN NNM1 T1 ON T0."Series" = T1."Series"
 	WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
@@ -2803,6 +2811,47 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
 			END IF;
 		END IF;
 
+		SELECT COUNT(*) INTO IsRM FROM PRQ1 T0
+    	WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ItemCode" LIKE '%RM%';
+
+    	IF IsRM > 0 AND DocDate >= '2026-07-03' THEN
+        	SELECT MAX(T0."PQTReqDate") INTO MaxShipDate
+       		FROM PRQ1 T0
+        	WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
+
+       		 -- Using the pre-assigned :DeliveryDate variable which holds OPRQ."DocDueDate"
+        	IF :MaxShipDate <> DeliveryDate THEN
+            error := -41017;
+            error_message := N'The Maximum Row Delivery Date (' || TO_VARCHAR(:MaxShipDate, 'YYYY-MM-DD') ||
+                             N') must exactly match the Header Delivery Date (' || TO_VARCHAR(:DeliveryDate, 'YYYY-MM-DD') || N').';
+        	END IF;
+   		END IF;
+
+   		SELECT COUNT(*) INTO RM_COUNT
+		FROM PRQ1
+		WHERE "DocEntry" = :list_of_cols_val_tab_del
+		  AND "ItemCode" LIKE '%RM%';
+
+		SELECT COUNT(*) INTO PM_COUNT
+		FROM PRQ1
+		WHERE "DocEntry" = :list_of_cols_val_tab_del
+		  AND "ItemCode" LIKE '%PM%';
+
+		IF :RM_COUNT > 0 AND :PM_COUNT > 0 THEN
+		    error := -41018;
+		    error_message := N'RM and PM materials cannot be included in the same Purchase Request.';
+		END IF;
+
+		SELECT COUNT(DISTINCT LEFT(UPPER("ItemCode"), 2)) INTO DIV_COUNT
+		FROM PRQ1
+		WHERE "DocEntry" = :list_of_cols_val_tab_del
+		AND LEFT(UPPER("ItemCode"), 2) IN ('PC', 'DI', 'OF');
+
+		IF :DIV_COUNT > 1 THEN
+		    error := -41019;
+		    error_message := N'Different division materials (PC, SC, OF) cannot be included in the same Purchase Request.';
+		END IF;
+
 		MIN_ROW := MIN_ROW + 1;
 	END WHILE;
 END IF;
@@ -2836,6 +2885,12 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 		DECLARE ReqDate DATE;
 		DECLARE TaxDate DATE;
         DECLARE Typ NVARCHAR(250);
+        DECLARE MaxShipDate DATE;
+	    DECLARE IsRM INT;
+	    DECLARE DeliveryDate DATE;
+	    DECLARE RM_COUNT INT;
+	    DECLARE PM_COUNT INT;
+	    DECLARE DIV_COUNT INT;
 
 		-- Header-Level Validations
 		-----------------------------------------------------------------------------------
@@ -2964,6 +3019,47 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 					error_message := N'Please select '||Typ||' Warehouse at RowNum '||MIN_ROW+1||' For this ItemCode '||ItemCode;
 				END IF;
 			END IF;
+
+			SELECT COUNT(*) INTO IsRM FROM PRQ1 T0
+    	WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ItemCode" LIKE '%RM%';
+
+    	IF IsRM > 0 AND DocDate >= '2026-07-03' THEN
+        	SELECT MAX(T0."PQTReqDate") INTO MaxShipDate
+       		FROM PRQ1 T0
+        	WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
+
+       		 -- Using the pre-assigned :DeliveryDate variable which holds OPRQ."DocDueDate"
+        	IF :MaxShipDate <> DeliveryDate THEN
+            error := -41017;
+            error_message := N'The Maximum Row Delivery Date (' || TO_VARCHAR(:MaxShipDate, 'YYYY-MM-DD') ||
+                             N') must exactly match the Header Delivery Date (' || TO_VARCHAR(:DeliveryDate, 'YYYY-MM-DD') || N').';
+        	END IF;
+   		END IF;
+
+   		SELECT COUNT(*) INTO RM_COUNT
+		FROM PRQ1
+		WHERE "DocEntry" = :list_of_cols_val_tab_del
+		  AND "ItemCode" LIKE '%RM%';
+
+		SELECT COUNT(*) INTO PM_COUNT
+		FROM PRQ1
+		WHERE "DocEntry" = :list_of_cols_val_tab_del
+		  AND "ItemCode" LIKE '%PM%';
+
+		IF :RM_COUNT > 0 AND :PM_COUNT > 0 THEN
+		    error := -41018;
+		    error_message := N'RM and PM materials cannot be included in the same Purchase Request.';
+		END IF;
+
+		SELECT COUNT(DISTINCT LEFT(UPPER("ItemCode"), 2)) INTO DIV_COUNT
+		FROM PRQ1
+		WHERE "DocEntry" = :list_of_cols_val_tab_del
+		AND LEFT(UPPER("ItemCode"), 2) IN ('PC', 'DI', 'OF');
+
+		IF :DIV_COUNT > 1 THEN
+		    error := -41019;
+		    error_message := N'Different division materials (PC, SC, OF) cannot be included in the same Purchase Request.';
+		END IF;
 
 			MIN_ROW := MIN_ROW + 1;
 		END WHILE;
