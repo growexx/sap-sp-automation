@@ -24442,6 +24442,7 @@ IF :object_type = '18' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
         END IF;
 END IF;
 
+
 -- ==============================================================================
 -- A/P Invoice DRAFTS: "No Required" Strict Cleanup Rule (Separated by Base Object Type)
 -- ==============================================================================
