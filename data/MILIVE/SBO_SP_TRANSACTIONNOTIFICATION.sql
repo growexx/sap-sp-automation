@@ -566,7 +566,7 @@ IF Object_type = '17' AND (:transaction_type = 'A' or :transaction_type = 'U') T
     DECLARE SOSLP INT;
     DECLARE BPSLP INT;
     DECLARE RMRKPRD NVARCHAR(5000);
-    DECLARE RMRKSTR NVARCHAR(500);
+    DECLARE RMRKSTR NVARCHAR(5000);
     DECLARE RMRKQC NVARCHAR(500);
     DECLARE SODate DATE;
     DECLARE DueDate DATE;
@@ -1216,7 +1216,7 @@ IF Object_type = '112' AND (:transaction_type = 'A' or :transaction_type = 'U') 
     SELECT T0."ObjType" INTO DraftObj FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
     -- All validations below apply only to Sales Order Drafts (Object Type 17)
     IF DraftObj = 17 THEN
-            DECLARE MinSO INT;
+        DECLARE MinSO INT;
         DECLARE MaxSO INT;
         DECLARE SOEntryType NVARCHAR(50);
         DECLARE SOItemCode NVARCHAR(50);
@@ -1228,7 +1228,7 @@ IF Object_type = '112' AND (:transaction_type = 'A' or :transaction_type = 'U') 
         DECLARE CustRef NVARCHAR(200);
         DECLARE SESO INT;
         DECLARE RMRKPRD NVARCHAR(500);
-        DECLARE RMRKSTR NVARCHAR(500);
+        DECLARE RMRKSTR NVARCHAR(5000);
         DECLARE RMRKQC NVARCHAR(500);
         DECLARE Series NVARCHAR(50);
         DECLARE LicenseTypeSO NVARCHAR(50);
