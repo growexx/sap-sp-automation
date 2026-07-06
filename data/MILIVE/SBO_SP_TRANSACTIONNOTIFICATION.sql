@@ -5111,7 +5111,7 @@ DECLARE ItemGR Nvarchar(50);
 	END WHILE;
 END IF;
 
-/*IF object_type = '59' AND (:transaction_type = 'A') THEN
+IF object_type = '59' AND (:transaction_type = 'A') THEN
 DECLARE MinGR Int;
 DECLARE MaxGR Int;
 DECLARE WhsGR Nvarchar(50);
@@ -5131,8 +5131,7 @@ DECLARE ItemGR Nvarchar(50);
 		END IF;
 		MinGR := MinGR+1;
 	END WHILE;
-END IF;*/
-
+END IF;
 --------------------------------------
 -- when creating/updating/deleting a Goods Receipt (object_type = 59)
 IF :object_type = '59' AND (:transaction_type = 'A') THEN
