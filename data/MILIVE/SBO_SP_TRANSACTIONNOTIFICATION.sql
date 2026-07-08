@@ -24755,6 +24755,311 @@ DECLARE DocDate DATE;
 	    END IF;
     END IF;
 END IF;
+---------------------------------------------------------------------------------------------
+-- VALIDATION: Import Charges Validation at Purchase Order DRAFT Stage (Obj 112)
+---------------------------------------------------------------------------------------------
+IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+
+    DECLARE cnt_drf_rule1 INT;
+    DECLARE cnt_drf_rule2 INT;
+    DECLARE cnt_drf_rule3 INT;
+    DECLARE cnt_drf_rule4 INT;
+
+    -----------------------------------------------------------------------------------------
+    -- Rule 1 : Import Charges field is mandatory for RM, FG and TR items in PO Drafts
+    -----------------------------------------------------------------------------------------
+    SELECT COUNT(*) INTO cnt_drf_rule1
+    FROM DRF1 T0
+    INNER JOIN ODRF T1 ON T0."DocEntry" = T1."DocEntry"
+    INNER JOIN OITM T2 ON T0."ItemCode" = T2."ItemCode"
+    WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+      AND T1."ObjType" = '22' -- Restricts check only to Purchase Order Drafts
+      AND (T2."ItemCode" LIKE '%RM%' OR T2."ItemCode" LIKE '%FG%' OR T2."ItemCode" LIKE '%TR%')
+      AND IFNULL(T0."U_ImportCharges",'') = '';
+
+    IF :cnt_drf_rule1 > 0 THEN
+        error := 11201;
+        error_message := 'Draft Blocked: Import Charges selection is mandatory for RM, FG and TR items.';
+    END IF;
+
+    -----------------------------------------------------------------------------------------
+    -- Rule 2 : Percentage and Amount must be > 0 for Custom Duty / CVD in PO Drafts
+    -----------------------------------------------------------------------------------------
+    SELECT COUNT(*) INTO cnt_drf_rule2
+    FROM DRF1 T0
+    INNER JOIN ODRF T1 ON T0."DocEntry" = T1."DocEntry"
+    WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+      AND T1."ObjType" = '22'
+      AND T0."U_ImportCharges" IN ('Custom Duty','CVD')
+      AND (IFNULL(T0."U_ImportChargesPer",0) <= 0 OR IFNULL(T0."U_ImportChargesAmt",0) <= 0);
+
+    IF :cnt_drf_rule2 > 0 THEN
+        error := 11202;
+        error_message := 'Draft Blocked: Import Charges Percentage and Amount must be greater than zero.';
+    END IF;
+
+    -----------------------------------------------------------------------------------------
+    -- Rule 3 : No charges allowed when Import Charges field is set to 'No'
+    -----------------------------------------------------------------------------------------
+    SELECT COUNT(*) INTO cnt_drf_rule3
+    FROM DRF1 T0
+    INNER JOIN ODRF T1 ON T0."DocEntry" = T1."DocEntry"
+    WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+      AND T1."ObjType" = '22'
+      AND T0."U_ImportCharges" = 'No'
+      AND (IFNULL(T0."U_ImportChargesPer",0) <> 0 OR IFNULL(T0."U_ImportChargesAmt",0) <> 0);
+
+    IF :cnt_drf_rule3 > 0 THEN
+        error := 11203;
+        error_message := 'Draft Blocked: Import Charges Percentage and Amount must be zero when selection is No.';
+    END IF;
+
+    -----------------------------------------------------------------------------------------
+    -- Rule 4 : Validate selected Item Code exists in @IMPCHRGD Master Table
+    -----------------------------------------------------------------------------------------
+    SELECT COUNT(*) INTO cnt_drf_rule4
+    FROM DRF1 T0
+    INNER JOIN ODRF T1 ON T0."DocEntry" = T1."DocEntry"
+    WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+      AND T1."ObjType" = '22'
+      AND T0."U_ImportCharges" IN ('Custom Duty', 'CVD')
+      AND NOT EXISTS (
+          SELECT 1 FROM "@IMPCHRGD" M0
+          WHERE M0."U_ItemCode" = T0."ItemCode"
+          AND M0."U_CountryCode" = T0."U_Q_ImpInd" -- Validates Vendor Country matches Master
+            AND CAST(M0."U_Percentage" AS DECIMAL(19,3)) = CAST(T0."U_ImportChargesPer" AS DECIMAL(19,3))
+      );
+
+    IF :cnt_drf_rule4 > 0 THEN
+        error := 11204;
+        error_message := 'Draft Blocked! The selected Item Code is missing from the Import Charges Master Configuration.';
+    END IF;
+
+END IF;
+---------------------------------------------------------------------------------------------
+-- VALIDATION: Import Charges Validation at Purchase Order Stage (Obj 22)
+---------------------------------------------------------------------------------------------
+IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+    DECLARE cnt_rule1 INT;
+    DECLARE cnt_rule2 INT;
+    DECLARE cnt_rule3 INT;
+    DECLARE cnt_rule4 INT; -- Added variable for master data check
+
+    -- Rule 1 : Import Charges is mandatory for RM, FG and TR items
+    SELECT COUNT(*) INTO cnt_rule1
+    FROM POR1 T0
+    INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
+    WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+      AND (T1."ItemCode" LIKE '%RM%' OR T1."ItemCode" LIKE '%FG%' OR T1."ItemCode" LIKE '%TR%')
+      AND IFNULL(T0."U_ImportCharges",'') = '';
+
+    IF :cnt_rule1 > 0 THEN
+        error := 2201;
+        error_message := 'Import Charges is mandatory for RM, FG and TR items.';
+    END IF;
+
+    -- Rule 2 : Percentage and Amount required for Custom Duty / CVD
+    SELECT COUNT(*) INTO cnt_rule2
+    FROM POR1 T0
+    WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+      AND T0."U_ImportCharges" IN ('Custom Duty','CVD')
+      AND (IFNULL(T0."U_ImportChargesPer",0) <= 0 OR IFNULL(T0."U_ImportChargesAmt",0) <= 0);
+
+    IF :cnt_rule2 > 0 THEN
+        error := 2202;
+        error_message := 'Import Charges Percentage and Amount must be greater than zero.';
+    END IF;
+
+    -- Rule 3 : No charges allowed when Import Charges = No
+    SELECT COUNT(*) INTO cnt_rule3
+    FROM POR1 T0
+    WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+      AND T0."U_ImportCharges" = 'No'
+      AND (IFNULL(T0."U_ImportChargesPer",0) <> 0 OR IFNULL(T0."U_ImportChargesAmt",0) <> 0);
+
+    IF :cnt_rule3 > 0 THEN
+        error := 2203;
+        error_message := 'Import Charges Percentage and Amount must be zero when Import Charges is No.';
+    END IF;
+
+    -- Rule 4 : Validate Item Code exists in @IMPCHRGD Master Table when charges are applicable
+    SELECT COUNT(*) INTO cnt_rule4
+    FROM POR1 T0
+    WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+      AND T0."U_ImportCharges" IN ('Custom Duty', 'CVD')
+      AND NOT EXISTS (
+          SELECT 1 FROM "@IMPCHRGD" M0
+          WHERE M0."U_ItemCode" = T0."ItemCode"
+          AND M0."U_CountryCode" = T0."U_Q_ImpInd" -- Validates Vendor Country matches Master
+            AND CAST(M0."U_Percentage" AS DECIMAL(19,3)) = CAST(T0."U_ImportChargesPer" AS DECIMAL(19,3))
+      );
+
+    IF :cnt_rule4 > 0 THEN
+        error := 2204;
+        error_message := 'Transaction blocked! The selected Item Code is missing from the Import Charges Master Configuration.';
+    END IF;
+END IF;
+
+---------------------------------------------------------------------------------------------
+-- VALIDATION 1: Restrict Transactions Before Custom Duty Entry is Processed (Obj 60/67/18)
+---------------------------------------------------------------------------------------------
+IF :object_type IN ('60', '67', '18') AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+    DECLARE pending_item NVARCHAR(50) := '';
+    DECLARE pending_line INT := -1;
+    DECLARE pending_batch NVARCHAR(100) := '';
+
+    SELECT
+        IFNULL(MAX(src."ItemCode"), ''),
+        IFNULL(MAX(src."CalcLine"), -1),
+        IFNULL(MAX(src."BatchNum"), '')
+    INTO
+        pending_item,
+        pending_line,
+        pending_batch
+    FROM (
+        -- CASE A: For Goods Issues (60) and Inventory Transfers (67), trace via Batch Tables
+        SELECT TOP 1
+            B1."ItemCode",
+            B1."LineNum" + 1 AS "CalcLine",
+            IFNULL(B1."BatchNum", 'No Batch Allocated') AS "BatchNum"
+        FROM IBT1 B1
+        INNER JOIN OIBT B0 ON B1."ItemCode" = B0."ItemCode" AND B1."BatchNum" = B0."BatchNum"
+        INNER JOIN OITM I0 ON B1."ItemCode" = I0."ItemCode"
+        INNER JOIN IBT1 B_GRN ON B0."ItemCode" = B_GRN."ItemCode" AND B0."BatchNum" = B_GRN."BatchNum" AND B_GRN."BaseType" = 20
+        INNER JOIN PDN1 G1 ON B_GRN."BaseEntry" = G1."DocEntry" AND B_GRN."BaseLinNum" = G1."LineNum"
+        WHERE :object_type IN ('60', '67')
+          AND B1."BaseType" = :object_type
+          AND B1."BaseEntry" = :list_of_cols_val_tab_del
+          AND (I0."ItemCode" LIKE '%RM%' OR I0."ItemCode" LIKE '%FG%' OR I0."ItemCode" LIKE '%TR%')
+          AND IFNULL(G1."U_ImportCharges", '') <> 'No'
+          AND IFNULL(G1."U_ImportCharges", '') <> ''
+          AND NOT EXISTS (
+              SELECT 1 FROM IPF1 L0
+              WHERE L0."BaseEntry" = G1."DocEntry"
+                AND L0."OrigLine" = G1."LineNum" -- Updated to OrigLine
+                AND L0."BaseType" = 20
+          )
+
+        UNION ALL
+
+        -- CASE B: For A/P Invoices (18), trace directly using marketing document base reference links
+        SELECT TOP 1
+            P1."ItemCode",
+            P1."LineNum" + 1 AS "CalcLine",
+            'Linked via GRN Document' AS "BatchNum"
+        FROM PCH1 P1
+        INNER JOIN OITM I0 ON P1."ItemCode" = I0."ItemCode"
+        INNER JOIN PDN1 G1 ON P1."BaseEntry" = G1."DocEntry" AND P1."BaseLine" = G1."LineNum"
+        WHERE :object_type = '18'
+          AND P1."DocEntry" = :list_of_cols_val_tab_del
+          AND P1."BaseType" = 20
+          AND (I0."ItemCode" LIKE '%RM%' OR I0."ItemCode" LIKE '%FG%' OR I0."ItemCode" LIKE '%TR%')
+          AND IFNULL(G1."U_ImportCharges", '') <> 'No'
+          AND IFNULL(G1."U_ImportCharges", '') <> ''
+          AND NOT EXISTS (
+              SELECT 1 FROM IPF1 L0
+              WHERE L0."BaseEntry" = G1."DocEntry"
+                AND L0."OrigLine" = G1."LineNum" -- Updated to OrigLine
+                AND L0."BaseType" = 20
+          )
+    ) src;
+
+    IF :pending_line <> -1 AND :pending_item <> '' THEN
+        error := 6901;
+        error_message := 'Imp Charge mismatch at Row ' || TO_VARCHAR(:pending_line) || ' (Item: ' || :pending_item || ', Batch: ' || :pending_batch || '). ' ||
+                         'you can not use this batch untile the import expese allocation not done';
+    END IF;
+END IF;
+
+---------------------------------------------------------------------------------------------
+-- VALIDATION 2: Prevent Duplicate Allocation Entries (Obj 69)
+---------------------------------------------------------------------------------------------
+IF :object_type = '69' AND :transaction_type = 'A' THEN
+
+    DECLARE cnt_lc_dup INT := 0;
+
+    SELECT COUNT(*) INTO cnt_lc_dup
+    FROM IPF1 T0
+    WHERE T0."BaseType" = 20
+      AND T0."DocEntry" <> :list_of_cols_val_tab_del
+      AND T0."BaseEntry" IN (
+          SELECT DISTINCT T1."BaseEntry"
+          FROM IPF1 T1
+          WHERE T1."DocEntry" = :list_of_cols_val_tab_del
+            AND T1."BaseType" = 20);
+
+    IF :cnt_lc_dup > 0 THEN
+        error := 6902;
+        error_message := 'Landed Cost has already been processed for the selected GRN. Duplicate Landed Cost entry is not allowed.';
+    END IF;
+END IF;
+
+---------------------------------------------------------------------------------------------
+-- VALIDATION 3: Dynamic Amount & Currency Matching (Obj 69)
+---------------------------------------------------------------------------------------------
+IF :object_type = '69' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+
+    DECLARE mismatch_item NVARCHAR(50) := '';
+    DECLARE mismatch_line INT := -1;
+    DECLARE grn_row_tot DECIMAL(19,3) := 0;
+    DECLARE lc_row_tot DECIMAL(19,3) := 0;
+    DECLARE row_diff DECIMAL(19,3) := 0;
+    DECLARE header_currency NVARCHAR(10) := '';
+
+    -- 1. HEADER CHECK: Ensure the Document Currency is set to INR
+    SELECT IFNULL(T0."DocCur", '') INTO header_currency
+    FROM OIPF T0
+    WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
+
+    IF :header_currency <> 'INR' THEN
+        error := 6904;
+        error_message := 'Currency mismatch! Expenses must be in INR only. Entry not allowed to save.';
+    ELSE
+        -- 2. ROW CHECK: Verify GRN estimated charges exactly match final allocation
+        SELECT
+            IFNULL(MAX(src."ItemCode"), ''),
+            IFNULL(MAX(src."CalcLine"), -1),
+            IFNULL(MAX(src."GTotal"), 0),
+            IFNULL(MAX(src."LTotal"), 0)
+        INTO
+            mismatch_item,
+            mismatch_line,
+            grn_row_tot,
+            lc_row_tot
+        FROM (
+            SELECT TOP 1
+                T0."ItemCode",
+                T0."LineNum" + 1 AS "CalcLine",
+                (IFNULL(G1."U_ImportChargesAmt", 0) + IFNULL(G1."U_SWFAmt", 0)) AS "GTotal",
+                IFNULL(T0."TtlCustLC", 0) AS "LTotal"
+            FROM IPF1 T0
+            INNER JOIN PDN1 G1 ON T0."BaseEntry" = G1."DocEntry" AND T0."OrigLine" = G1."LineNum" -- Updated to OrigLine
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T0."BaseType" = 20
+              AND (IFNULL(G1."U_ImportChargesAmt", 0) + IFNULL(G1."U_SWFAmt", 0)) <> IFNULL(T0."TtlCustLC", 0)
+        ) src;
+
+        IF :mismatch_line <> -1 AND :mismatch_item <> '' THEN
+
+            row_diff := ABS(:grn_row_tot - :lc_row_tot);
+            error := 6903;
+
+            IF :lc_row_tot < :grn_row_tot THEN
+                error_message := 'Imp Charge mismatch at Row ' || TO_VARCHAR(:mismatch_line) || ' (Item: ' || :mismatch_item || '). ' ||
+                                 'GRN Total = ' || TO_VARCHAR(:grn_row_tot) ||
+                                 ', Imp Charge Total = ' || TO_VARCHAR(:lc_row_tot) ||
+                                 '. Please ADD ' || TO_VARCHAR(:row_diff) ||
+                                 ' Please click on Magnifier symbol in ImpCharge field to get auto value.';
+            ELSE
+                error_message := 'Imp Charge mismatch at Row ' || TO_VARCHAR(:mismatch_line) || ' (Item: ' || :mismatch_item || '). ' ||
+                                 'GRN Total = ' || TO_VARCHAR(:grn_row_tot) ||
+                                 ', Imp Charge Total = ' || TO_VARCHAR(:lc_row_tot) ||
+                                 '. Please REDUCE ' || TO_VARCHAR(:row_diff) ||
+                                 ' Please click on Magnifier symbol in ImpCharge field to get auto value.';
+            END IF;
+        END IF;
+    END IF;
+END IF;
 ------------------------------------------------------------------------------------------------
 -- Select the return values-
 select :error, :error_message FROM dummy;

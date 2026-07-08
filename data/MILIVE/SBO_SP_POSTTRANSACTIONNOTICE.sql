@@ -30,187 +30,262 @@ error_message := N'Ok';
 ---------------------Delivery--Mobi Alert---------09-12-2024----------By VC Team--------------------------------------------
 IF (:object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')) THEN
 
-	select Count(*) into TEMP from
-	(select T1."CardCode",min(T0."DueDate") as "DueDateOld",T1."Balance",T1."CreditLine" from JDT1 T0
-		INNER JOIN OCRD T1 ON T0."ShortName" = T1."CardCode" and T1."CardType"='C' and T1."CardCode" LIKE 'CPE%'
-		where T0."BalDueDeb" != T0."BalDueCred" and T1."CardCode" =
-		(SELECT T0."CardCode" FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15)
-		group by T1."CardCode",T1."Balance",T1."CreditLine" ) as A where DAYS_BETWEEN(A."DueDateOld",Current_Date)<=0 and
-			(SELECT T1."Balance" FROM ODRF T0
-			left outer join OCRD T1 on T0."CardCode" = T1."CardCode"
-			WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15)
-			>=
-			(SELECT T1."CreditLine" FROM ODRF T0
-			Left Join OCRD T1 on T0."CardCode" = T1."CardCode"
-			WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15)
-			and (SELECT T0."GroupNum" FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15)
-			NOT IN (5,70,34,23,73);
+    SELECT COUNT(*) INTO TEMP FROM
+    (
+        SELECT T1."CardCode", MIN(T0."DueDate") AS "DueDateOld", T1."Balance", T1."CreditLine"
+        FROM JDT1 T0
+        INNER JOIN OCRD T1 ON T0."ShortName" = T1."CardCode" AND T1."CardType" = 'C' AND T1."CardCode" LIKE 'CPE%'
+        WHERE T0."BalDueDeb" != T0."BalDueCred" AND T1."CardCode" =
+        (SELECT T0."CardCode" FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15)
+        GROUP BY T1."CardCode", T1."Balance", T1."CreditLine"
+    ) AS A
+    WHERE DAYS_BETWEEN(A."DueDateOld", CURRENT_DATE) <= 0
+      AND (
+          SELECT T1."Balance" FROM ODRF T0
+          LEFT OUTER JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+          WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15
+      ) >=
+      (
+          SELECT T1."CreditLine" FROM ODRF T0
+          LEFT JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+          WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15
+      )
+      AND (SELECT T0."GroupNum" FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15) NOT IN (5, 70, 34, 23, 73);
 
-	IF :TEMP > 0 THEN
+    IF :TEMP > 0 THEN
+        SELECT T0."DocEntry" INTO DocEntry FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15;
 
-		SELECT T0."DocEntry" INTO DocEntry FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15;
+        MailID := 'cfo@matangiindustries.com';
+        Mobile := '';
 
-		MailID := 'cfo@matangiindustries.com';
-		Mobile := '';
-		EmailCC := 'saleshead@matangiindustries.com,Salesmgr@matangiindustries.com,Ramesh@matangiindustries.com,custsupport@matangiindustries.com';
-		EmailBCC := '';
-		ObjectType := 'A';
-		Mobi_TYPE := 'Delivery Credit Limit Passed';
-		Select CURRENT_SCHEMA Into DBName from Dummy;
-		If(:DBName = 'MILIVE') Then
-		CALL "MOBIALERT"."Add_Config_Proc" (115,:DocEntry,:transaction_type,:MailID,:Mobile,:EmailCC,:EmailBCC,:ObjectType,:Mobi_TYPE);
-		END IF;
-	END IF;
+        -- Dynamically add Salesmgr to CC only if OSLP."Email" matches the list
+        SELECT 'saleshead@matangiindustries.com,' ||
+               CASE WHEN SUM(CASE WHEN T2."Email" IN ('amsales2@matangiindustries.com','bde6@matangiindustries.com','sales5@matangiindustries.com') THEN 1 ELSE 0 END) > 0
+               THEN 'Salesmgr@matangiindustries.com,' ELSE '' END ||
+               'Ramesh@matangiindustries.com,custsupport@matangiindustries.com' INTO EmailCC
+        FROM ODRF T0
+        INNER JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+        INNER JOIN OSLP T2 ON T1."SlpCode" = T2."SlpCode"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15;
+
+        EmailBCC := '';
+        ObjectType := 'A';
+        Mobi_TYPE := 'Delivery Credit Limit Passed';
+        SELECT CURRENT_SCHEMA INTO DBName FROM Dummy;
+
+        IF(:DBName = 'MILIVE') THEN
+            CALL "MOBIALERT"."Add_Config_Proc" (115, :DocEntry, :transaction_type, :MailID, :Mobile, :EmailCC, :EmailBCC, :ObjectType, :Mobi_TYPE);
+        END IF;
+    END IF;
 END IF;
 
 ---------------------Delivery--Mobi Alert---------16-12-2024------02 SalesDel Crd Lmt 0 and OD Days 0 to 15>>SM---------------------------------------------
 IF (:object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')) THEN
 
-	SELECT Count(*) INTO TEMP FROM
-	(SELECT T1."CardCode", MIN(T0."DueDate") AS "DueDateOld", T1."Balance", T1."CreditLine" FROM JDT1 T0
-		INNER JOIN OCRD T1 ON T0."ShortName" = T1."CardCode" AND T1."CardType"='C' AND T1."CardCode" LIKE 'CPE%'
-		WHERE T0."BalDueDeb" != T0."BalDueCred" AND T1."Balance">0 AND T1."CardCode" =
-		(SELECT T0."CardCode" FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del AND T0."ObjType" = 15)
-		GROUP BY T1."CardCode", T1."Balance", T1."CreditLine" ) AS A WHERE DAYS_BETWEEN(A."DueDateOld", Current_Date)>0 AND DAYS_BETWEEN(A."DueDateOld", Current_Date)<=15 AND
-			(SELECT T1."Balance" FROM ODRF T0
-			LEFT JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
-			WHERE T0."DocEntry"=:list_of_cols_val_tab_del AND T0."ObjType" = 15)
-			<=
-			(SELECT T1."CreditLine" FROM ODRF T0
-			LEFT JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
-			WHERE T0."DocEntry"=:list_of_cols_val_tab_del AND T0."ObjType" = 15)
-			AND (SELECT T0."GroupNum" FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del AND T0."ObjType" = 15) NOT IN (5,70,34,23,73);
+    SELECT COUNT(*) INTO TEMP FROM
+    (
+        SELECT T1."CardCode", MIN(T0."DueDate") AS "DueDateOld", T1."Balance", T1."CreditLine"
+        FROM JDT1 T0
+        INNER JOIN OCRD T1 ON T0."ShortName" = T1."CardCode" AND T1."CardType" = 'C' AND T1."CardCode" LIKE 'CPE%'
+        WHERE T0."BalDueDeb" != T0."BalDueCred" AND T1."Balance" > 0 AND T1."CardCode" =
+        (SELECT T0."CardCode" FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15)
+        GROUP BY T1."CardCode", T1."Balance", T1."CreditLine"
+    ) AS A
+    WHERE DAYS_BETWEEN(A."DueDateOld", CURRENT_DATE) > 0 AND DAYS_BETWEEN(A."DueDateOld", CURRENT_DATE) <= 15
+      AND (
+          SELECT T1."Balance" FROM ODRF T0
+          LEFT JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+          WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15
+      ) <=
+      (
+          SELECT T1."CreditLine" FROM ODRF T0
+          LEFT JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+          WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15
+      )
+      AND (SELECT T0."GroupNum" FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15) NOT IN (5, 70, 34, 23, 73);
 
-	IF :TEMP > 0 THEN
+    IF :TEMP > 0 THEN
+        SELECT T0."DocEntry" INTO DocEntry FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15;
 
-		SELECT T0."DocEntry" INTO DocEntry FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del AND T0."ObjType" = 15;
-
-        -- Dynamically check the Sales Employee email and assign the result directly to MailID
+        -- Dynamically check the Sales Employee email and conditionally add Salesmgr
         SELECT CASE
-            WHEN COUNT(*) > 0 THEN 'saleshead@matangiindustries.com,custsupport@matangiindustries.com'
-            ELSE 'saleshead@matangiindustries.com,Salesmgr@matangiindustries.com,custsupport@matangiindustries.com'
+            WHEN SUM(CASE WHEN T2."Email" IN ('bde4@matangiindustries.com', 'sales4@matangiindustries.com') THEN 1 ELSE 0 END) > 0 THEN 'saleshead@matangiindustries.com,custsupport@matangiindustries.com'
+            WHEN SUM(CASE WHEN T2."Email" IN ('amsales2@matangiindustries.com','bde6@matangiindustries.com','sales5@matangiindustries.com') THEN 1 ELSE 0 END) > 0 THEN 'saleshead@matangiindustries.com,Salesmgr@matangiindustries.com,custsupport@matangiindustries.com'
+            ELSE 'saleshead@matangiindustries.com,custsupport@matangiindustries.com'
         END INTO MailID
         FROM ODRF T0
         INNER JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
         INNER JOIN OSLP T2 ON T1."SlpCode" = T2."SlpCode"
-        WHERE T0."DocEntry" = :list_of_cols_val_tab_del
-          AND T0."ObjType" = 15
-          AND T2."Email" IN ('bde4@matangiindustries.com', 'sales4@matangiindustries.com');
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15;
 
-		Mobile := '';
-		EmailCC := 'Ramesh@matangiindustries.com';
-		EmailBCC := '';
-		ObjectType := 'B';
-		Mobi_TYPE := 'Delivery - Credit Limit Passed2';
+        Mobile := '';
+        EmailCC := 'Ramesh@matangiindustries.com';
+        EmailBCC := '';
+        ObjectType := 'B';
+        Mobi_TYPE := 'Delivery - Credit Limit Passed2';
 
-		SELECT CURRENT_SCHEMA INTO DBName FROM Dummy;
-		IF(:DBName = 'MILIVE') THEN
-		    CALL "MOBIALERT"."Add_Config_Proc" (115,:DocEntry,:transaction_type,:MailID,:Mobile,:EmailCC,:EmailBCC,:ObjectType,:Mobi_TYPE);
-		END IF;
+        SELECT CURRENT_SCHEMA INTO DBName FROM Dummy;
 
-	END IF;
+        IF(:DBName = 'MILIVE') THEN
+            CALL "MOBIALERT"."Add_Config_Proc" (115, :DocEntry, :transaction_type, :MailID, :Mobile, :EmailCC, :EmailBCC, :ObjectType, :Mobi_TYPE);
+        END IF;
+    END IF;
 END IF;
+
 ---------------------Delivery--Mobi Alert---------16-12-2024------03 SalesDel Crd Lmt Cross and OD Days 0 to 15 -->CFO-----------------------------
 IF (:object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')) THEN
 
-	select Count(*) into TEMP from
-	(select T1."CardCode",min(T0."DueDate") as "DueDateOld",T1."Balance",T1."CreditLine" from JDT1 T0
-		INNER JOIN OCRD T1 ON T0."ShortName" = T1."CardCode" and T1."CardType"='C' and T1."CardCode" LIKE 'CPE%'
-		where T0."BalDueDeb" != T0."BalDueCred" and T1."Balance">0 and T1."CardCode" =
-	(SELECT T0."CardCode" FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15)
-		group by T1."CardCode",T1."Balance",T1."CreditLine" ) as A where DAYS_BETWEEN(A."DueDateOld",Current_Date)>0 and DAYS_BETWEEN(A."DueDateOld",Current_Date)<=15 and
-		(SELECT T1."Balance" FROM ODRF T0
-		Left Join OCRD T1 on T0."CardCode" = T1."CardCode"
-		WHERE T1."Balance">0 and T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15)
-		>=
-		(SELECT T1."CreditLine" FROM ODRF T0
-		Left Join OCRD T1 on T0."CardCode" = T1."CardCode"
-		WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15)
-		and (SELECT T0."GroupNum" FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15) NOT IN (5,70,34,23,73);
+    SELECT COUNT(*) INTO TEMP FROM
+    (
+        SELECT T1."CardCode", MIN(T0."DueDate") AS "DueDateOld", T1."Balance", T1."CreditLine"
+        FROM JDT1 T0
+        INNER JOIN OCRD T1 ON T0."ShortName" = T1."CardCode" AND T1."CardType" = 'C' AND T1."CardCode" LIKE 'CPE%'
+        WHERE T0."BalDueDeb" != T0."BalDueCred" AND T1."Balance" > 0 AND T1."CardCode" =
+        (SELECT T0."CardCode" FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15)
+        GROUP BY T1."CardCode", T1."Balance", T1."CreditLine"
+    ) AS A
+    WHERE DAYS_BETWEEN(A."DueDateOld", CURRENT_DATE) > 0 AND DAYS_BETWEEN(A."DueDateOld", CURRENT_DATE) <= 15
+      AND (
+          SELECT T1."Balance" FROM ODRF T0
+          LEFT JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+          WHERE T1."Balance" > 0 AND T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15
+      ) >=
+      (
+          SELECT T1."CreditLine" FROM ODRF T0
+          LEFT JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+          WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15
+      )
+      AND (SELECT T0."GroupNum" FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15) NOT IN (5, 70, 34, 23, 73);
 
-	IF :TEMP > 0 THEN
+    IF :TEMP > 0 THEN
+        SELECT T0."DocEntry" INTO DocEntry FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15;
 
-		SELECT T0."DocEntry" INTO DocEntry FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15;
+        MailID := 'cfo@matangiindustries.com';
+        Mobile := '';
 
-		MailID := 'cfo@matangiindustries.com';
-		Mobile := '';
-		EmailCC := 'Ramesh@matangiindustries.com,saleshead@matangiindustries.com,Salesmgr@matangiindustries.com,custsupport@matangiindustries.com';
-		EmailBCC := '';
-		ObjectType := 'D';
-		Mobi_TYPE := 'Delivery - Credit Limit Passed3';
-		Select CURRENT_SCHEMA Into DBName from Dummy;
-		If(:DBName = 'MILIVE') Then
-		CALL "MOBIALERT"."Add_Config_Proc" (115,:DocEntry,:transaction_type,:MailID,:Mobile,:EmailCC,:EmailBCC,:ObjectType,:Mobi_TYPE);
-		END IF;
-	END IF;
+        -- Dynamically add Salesmgr to CC only if OSLP."Email" matches the list
+        SELECT 'Ramesh@matangiindustries.com,saleshead@matangiindustries.com,' ||
+               CASE WHEN SUM(CASE WHEN T2."Email" IN ('amsales2@matangiindustries.com','bde6@matangiindustries.com','sales5@matangiindustries.com') THEN 1 ELSE 0 END) > 0
+               THEN 'Salesmgr@matangiindustries.com,' ELSE '' END ||
+               'custsupport@matangiindustries.com' INTO EmailCC
+        FROM ODRF T0
+        INNER JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+        INNER JOIN OSLP T2 ON T1."SlpCode" = T2."SlpCode"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15;
+
+        EmailBCC := '';
+        ObjectType := 'D';
+        Mobi_TYPE := 'Delivery - Credit Limit Passed3';
+        SELECT CURRENT_SCHEMA INTO DBName FROM Dummy;
+
+        IF(:DBName = 'MILIVE') THEN
+            CALL "MOBIALERT"."Add_Config_Proc" (115, :DocEntry, :transaction_type, :MailID, :Mobile, :EmailCC, :EmailBCC, :ObjectType, :Mobi_TYPE);
+        END IF;
+    END IF;
 END IF;
+
 ---------------------Delivery--Mobi Alert---------16-12-2024------04 SalesDel Crd Lmt 0 and OD Days > 15 -->SM+CFO--------------------
 IF (:object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')) THEN
 
-	select Count(*) into TEMP from
-	(select T1."CardCode",min(T0."DueDate") as "DueDateOld",T1."Balance",T1."CreditLine" from JDT1 T0
-		INNER JOIN OCRD T1 ON T0."ShortName" = T1."CardCode" and T1."CardType"='C' and T1."CardCode" LIKE 'CPE%'
-		where T0."BalDueDeb" != T0."BalDueCred" and T1."CardCode" =
-		(SELECT T0."CardCode" FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15)
-		group by T1."CardCode",T1."Balance",T1."CreditLine" ) as A where DAYS_BETWEEN(A."DueDateOld",Current_Date)>15 and
-			(SELECT T1."Balance" FROM ODRF T0
-			left outer join OCRD T1 on T0."CardCode" = T1."CardCode"
-			WHERE T1."Balance">0 and T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15)
-			<=
-			(SELECT T1."CreditLine" FROM ODRF T0
-			Left Join OCRD T1 on T0."CardCode" = T1."CardCode"
-			WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15)
-			and (SELECT T0."GroupNum" FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15) NOT IN (5,70,34,23,73);
+    SELECT COUNT(*) INTO TEMP FROM
+    (
+        SELECT T1."CardCode", MIN(T0."DueDate") AS "DueDateOld", T1."Balance", T1."CreditLine"
+        FROM JDT1 T0
+        INNER JOIN OCRD T1 ON T0."ShortName" = T1."CardCode" AND T1."CardType" = 'C' AND T1."CardCode" LIKE 'CPE%'
+        WHERE T0."BalDueDeb" != T0."BalDueCred" AND T1."CardCode" =
+        (SELECT T0."CardCode" FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15)
+        GROUP BY T1."CardCode", T1."Balance", T1."CreditLine"
+    ) AS A
+    WHERE DAYS_BETWEEN(A."DueDateOld", CURRENT_DATE) > 15
+      AND (
+          SELECT T1."Balance" FROM ODRF T0
+          LEFT OUTER JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+          WHERE T1."Balance" > 0 AND T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15
+      ) <=
+      (
+          SELECT T1."CreditLine" FROM ODRF T0
+          LEFT JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+          WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15
+      )
+      AND (SELECT T0."GroupNum" FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15) NOT IN (5, 70, 34, 23, 73);
 
-	IF :TEMP > 0 THEN
+    IF :TEMP > 0 THEN
+        SELECT T0."DocEntry" INTO DocEntry FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15;
 
-		SELECT T0."DocEntry" INTO DocEntry FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15;
+        MailID := 'cfo@matangiindustries.com';
+        Mobile := '';
 
-		MailID := 'cfo@matangiindustries.com';
-		Mobile := '';
-		EmailCC := 'Ramesh@matangiindustries.com,saleshead@matangiindustries.com,Salesmgr@matangiindustries.com,custsupport@matangiindustries.com';
-		EmailBCC := '';
-		ObjectType := 'E';
-		Mobi_TYPE := 'Delivery - Credit Limit Passed4';
-		Select CURRENT_SCHEMA Into DBName from Dummy;
-		If(:DBName = 'MILIVE') Then
-		CALL "MOBIALERT"."Add_Config_Proc" (115,:DocEntry,:transaction_type,:MailID,:Mobile,:EmailCC,:EmailBCC,:ObjectType,:Mobi_TYPE);
-		END IF;
-	END IF;
+        -- Dynamically add Salesmgr to CC only if OSLP."Email" matches the list
+        SELECT 'Ramesh@matangiindustries.com,saleshead@matangiindustries.com,' ||
+               CASE WHEN SUM(CASE WHEN T2."Email" IN ('amsales2@matangiindustries.com','bde6@matangiindustries.com','sales5@matangiindustries.com') THEN 1 ELSE 0 END) > 0
+               THEN 'Salesmgr@matangiindustries.com,' ELSE '' END ||
+               'custsupport@matangiindustries.com' INTO EmailCC
+        FROM ODRF T0
+        INNER JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+        INNER JOIN OSLP T2 ON T1."SlpCode" = T2."SlpCode"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15;
+
+        EmailBCC := '';
+        ObjectType := 'E';
+        Mobi_TYPE := 'Delivery - Credit Limit Passed4';
+        SELECT CURRENT_SCHEMA INTO DBName FROM Dummy;
+
+        IF(:DBName = 'MILIVE') THEN
+            CALL "MOBIALERT"."Add_Config_Proc" (115, :DocEntry, :transaction_type, :MailID, :Mobile, :EmailCC, :EmailBCC, :ObjectType, :Mobi_TYPE);
+        END IF;
+    END IF;
 END IF;
+
 ---------------------Delivery--Mobi Alert---------16-12-2024------05 SalesDel Crd Lmt > 0 and OD Days > 15 -->SM+CFO---------------
 IF (:object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')) THEN
 
-	select Count(*) into TEMP from
-	(select T1."CardCode",min(T0."DueDate") as "DueDateOld",T1."Balance",T1."CreditLine" from JDT1 T0
-		INNER JOIN OCRD T1 ON T0."ShortName" = T1."CardCode" and T1."CardType"='C' and T1."CardCode" LIKE 'CPE%'
-		where T0."BalDueDeb" != T0."BalDueCred" and T1."CardCode" =
-		(SELECT T0."CardCode" FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15)
-		group by T1."CardCode",T1."Balance",T1."CreditLine" ) as A where DAYS_BETWEEN(A."DueDateOld",Current_Date)>15 and
-			(SELECT T1."Balance" FROM ODRF T0
-			left outer join OCRD T1 on T0."CardCode" = T1."CardCode"
-			WHERE T1."Balance">0 and T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15)
-			>=
-			(SELECT T1."CreditLine" FROM ODRF T0
-			Left Join OCRD T1 on T0."CardCode" = T1."CardCode"
-			WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15)
-			and (SELECT T0."GroupNum" FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15) NOT IN (5,70,34,23,73);
+    SELECT COUNT(*) INTO TEMP FROM
+    (
+        SELECT T1."CardCode", MIN(T0."DueDate") AS "DueDateOld", T1."Balance", T1."CreditLine"
+        FROM JDT1 T0
+        INNER JOIN OCRD T1 ON T0."ShortName" = T1."CardCode" AND T1."CardType" = 'C' AND T1."CardCode" LIKE 'CPE%'
+        WHERE T0."BalDueDeb" != T0."BalDueCred" AND T1."CardCode" =
+        (SELECT T0."CardCode" FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15)
+        GROUP BY T1."CardCode", T1."Balance", T1."CreditLine"
+    ) AS A
+    WHERE DAYS_BETWEEN(A."DueDateOld", CURRENT_DATE) > 15
+      AND (
+          SELECT T1."Balance" FROM ODRF T0
+          LEFT OUTER JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+          WHERE T1."Balance" > 0 AND T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15
+      ) >=
+      (
+          SELECT T1."CreditLine" FROM ODRF T0
+          LEFT JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+          WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15
+      )
+      AND (SELECT T0."GroupNum" FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15) NOT IN (5, 70, 34, 23, 73);
 
-	IF :TEMP > 0 THEN
+    IF :TEMP > 0 THEN
+        SELECT T0."DocEntry" INTO DocEntry FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15;
 
-		SELECT T0."DocEntry" INTO DocEntry FROM ODRF T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del and T0."ObjType" = 15;
+        MailID := 'cfo@matangiindustries.com';
+        Mobile := '';
 
-		MailID := 'cfo@matangiindustries.com';
-		Mobile := '';
-		EmailCC := 'Ramesh@matangiindustries.com,saleshead@matangiindustries.com,Salesmgr@matangiindustries.com,custsupport@matangiindustries.com';
-		EmailBCC := '';
-		ObjectType := 'F';
-		Mobi_TYPE := 'Delivery - Credit Limit Passed5';
-		Select CURRENT_SCHEMA Into DBName from Dummy;
-		If(:DBName = 'MILIVE') Then
-		CALL "MOBIALERT"."Add_Config_Proc" (115,:DocEntry,:transaction_type,:MailID,:Mobile,:EmailCC,:EmailBCC,:ObjectType,:Mobi_TYPE);
-		END IF;
-	END IF;
+        -- Dynamically add Salesmgr to CC only if OSLP."Email" matches the list
+        SELECT 'Ramesh@matangiindustries.com,saleshead@matangiindustries.com,' ||
+               CASE WHEN SUM(CASE WHEN T2."Email" IN ('amsales2@matangiindustries.com','bde6@matangiindustries.com','sales5@matangiindustries.com') THEN 1 ELSE 0 END) > 0
+               THEN 'Salesmgr@matangiindustries.com,' ELSE '' END ||
+               'custsupport@matangiindustries.com' INTO EmailCC
+        FROM ODRF T0
+        INNER JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+        INNER JOIN OSLP T2 ON T1."SlpCode" = T2."SlpCode"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType" = 15;
+
+        EmailBCC := '';
+        ObjectType := 'F';
+        Mobi_TYPE := 'Delivery - Credit Limit Passed5';
+        SELECT CURRENT_SCHEMA INTO DBName FROM Dummy;
+
+        IF(:DBName = 'MILIVE') THEN
+            CALL "MOBIALERT"."Add_Config_Proc" (115, :DocEntry, :transaction_type, :MailID, :Mobile, :EmailCC, :EmailBCC, :ObjectType, :Mobi_TYPE);
+        END IF;
+    END IF;
 END IF;
 
 ---------------------AR Invoice--Mobi Alert---------16-12-2024------06 SalesInv Crd Lmt < 0 and OD Days > 10 -->CFO---------------
@@ -441,25 +516,38 @@ End If;
 ---Sales Order Export remarks alert to Export team----
 IF (:object_type = '17' AND (:transaction_type = 'A' OR :transaction_type = 'U')) THEN
 
-select count(*) into Temp from ORDR T0
-where T0."CANCELED"='N'  and (T0."CardCode" like 'CPE%' or T0."CardCode" like 'COE%' or T0."CardCode" like 'CIE%')
-and CAST(T0."U_ExportRemarks" as Nvarchar)='Yes' and T0."DocEntry"=:list_of_cols_val_tab_del;
+    SELECT count(*) INTO Temp FROM ORDR T0
+    WHERE T0."CANCELED"='N' AND (T0."CardCode" LIKE 'CPE%' OR T0."CardCode" LIKE 'COE%' OR T0."CardCode" LIKE 'CIE%')
+      AND CAST(T0."U_ExportRemarks" AS Nvarchar)='Yes' AND T0."DocEntry"=:list_of_cols_val_tab_del;
 
-If :Temp > 0 then
+    IF :Temp > 0 THEN
 
-		SELECT T0."DocEntry" INTO DocEntry FROM ORDR T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del;
-		MailID:= 'exports@matangiindustries.com,impex@matangiindustries.com,export.doc@matangiindustries.com';
-		Mobile := '';
-		EmailCC := 'mgrppc@matangiindustries.com,amexport@matangiindustries.com,saleshead@matangiindustries.com,salesmgr@matangiindustries.com,custsupport@matangiindustries.com';
-		EmailBCC := '';
-		ObjectType := 'S';
-		Mobi_TYPE := 'Sales Order Export Remarks Alert';
-		Select CURRENT_SCHEMA Into DBName from Dummy;
-		If(:DBName = 'MILIVE') Then
-		CALL "MOBIALERT"."Add_Config_Proc" (117,:DocEntry,:transaction_type,:MailID,:Mobile,:EmailCC,:EmailBCC,:ObjectType,:Mobi_TYPE);
-		END IF;
-	End If;
-End If;
+        SELECT T0."DocEntry" INTO DocEntry FROM ORDR T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del;
+
+        MailID := 'exports@matangiindustries.com,impex@matangiindustries.com,export.doc@matangiindustries.com';
+        Mobile := '';
+
+        -- Dynamically add salesmgr to CC only if OSLP."Email" matches the list
+        SELECT 'mgrppc@matangiindustries.com,amexport@matangiindustries.com,saleshead@matangiindustries.com,' ||
+               CASE WHEN SUM(CASE WHEN T2."Email" IN ('amsales2@matangiindustries.com','bde6@matangiindustries.com','sales5@matangiindustries.com') THEN 1 ELSE 0 END) > 0
+               THEN 'salesmgr@matangiindustries.com,' ELSE '' END ||
+               'custsupport@matangiindustries.com' INTO EmailCC
+        FROM ORDR T0
+        INNER JOIN OCRD T1 ON T0."CardCode" = T1."CardCode"
+        INNER JOIN OSLP T2 ON T1."SlpCode" = T2."SlpCode"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
+
+        EmailBCC := '';
+        ObjectType := 'S';
+        Mobi_TYPE := 'Sales Order Export Remarks Alert';
+
+        SELECT CURRENT_SCHEMA INTO DBName FROM Dummy;
+
+        IF(:DBName = 'MILIVE') THEN
+            CALL "MOBIALERT"."Add_Config_Proc" (117,:DocEntry,:transaction_type,:MailID,:Mobile,:EmailCC,:EmailBCC,:ObjectType,:Mobi_TYPE);
+        END IF;
+    END IF;
+END IF;
 
 ---Outgoing Payment Advice for RM/PM----
 IF (:object_type = '46' AND (:transaction_type = 'A' OR :transaction_type = 'U')) THEN
@@ -517,31 +605,49 @@ End If;
 
 IF (:object_type = 'SHIPMASTER' AND (:transaction_type = 'A' OR :transaction_type = 'U')) THEN
 
-	select count(*) into Temp from "@SHIPMASTER" where IFNULL("U_Scheme1",'')<>'' and IFNULL("U_BLDate",'')='' and "Code"=:list_of_cols_val_tab_del;
+    SELECT COUNT(*) INTO TEMP
+    FROM "@SHIPMASTER"
+    WHERE IFNULL("U_Scheme1", '') <> ''
+      AND IFNULL("U_BLDate", '') = ''
+      AND "Code" = :list_of_cols_val_tab_del;
 
-	If :Temp > 0 then
+    IF :TEMP > 0 THEN
+        SELECT T0."Code" INTO DocEntry FROM "@SHIPMASTER" T0 WHERE T0."Code" = :list_of_cols_val_tab_del;
 
-		SELECT T0."Code" INTO DocEntry FROM "@SHIPMASTER" T0 WHERE T0."Code"=:list_of_cols_val_tab_del;
+        -- Efficiently construct the MailID string
+        SELECT
+            'saleshead@matangiindustries.com,custsupport@matangiindustries.com'
+            -- 1. Conditionally add the Sales Manager
+            || CASE
+                WHEN SUM(CASE WHEN T1."Email" IN ('amsales2@matangiindustries.com','bde6@matangiindustries.com','sales5@matangiindustries.com') THEN 1 ELSE 0 END) > 0
+                THEN ',salesmgr@matangiindustries.com'
+                ELSE ''
+               END
+            -- 2. Conditionally add the Sales Employee email(s)
+            || CASE
+                WHEN COUNT(T1."Email") > 0
+                THEN ',' || STRING_AGG(T1."Email", ',')
+                ELSE ''
+               END
+        INTO MailID
+        FROM "@SHIPMASTER" S0
+        JOIN OCRD T0 ON S0."U_BPCode" = T0."CardCode"
+        LEFT JOIN OSLP T1 ON T0."SlpCode" = T1."SlpCode"
+        WHERE T0."CardType" = 'C' AND S0."Code" = :list_of_cols_val_tab_del;
 
-		SELECT CASE WHEN SUM(CASE WHEN T1."Email" IN ('sales4@matangiindustries.com','bde4@matangiindustries.com') THEN 1 ELSE 0 END) > 0 THEN CONCAT('saleshead@matangiindustries.com,custsupport@matangiindustries.com,', STRING_AGG(T1."Email", ','))
-			   		WHEN COUNT(T1."Email") > 0 THEN CONCAT('saleshead@matangiindustries.com,salesmgr@matangiindustries.com,custsupport@matangiindustries.com,', STRING_AGG(T1."Email", ','))
-		        	ELSE 'saleshead@matangiindustries.com,salesmgr@matangiindustries.com,custsupport@matangiindustries.com'
-		       END AS "MailID" INTO MailID
-		FROM "@SHIPMASTER" S0
-		JOIN OCRD T0 ON S0."U_BPCode" = T0."CardCode"
-		LEFT JOIN OSLP T1 ON T0."SlpCode" = T1."SlpCode"
-		WHERE  T0."CardType" = 'C' AND S0."Code" = :list_of_cols_val_tab_del;
-		Mobile := '';
-		EmailCC := 'mgrppc@matangiindustries.com,amexport@matangiindustries.com,export.doc@matangiindustries.com,impex@matangiindustries.com,exports@matangiindustries.com,export.logistic@matangiindustries.com';
-		EmailBCC := 'sap2@matangiindustries.com,sap@matangiindustries.com';
-		ObjectType := 'X';
-		Mobi_TYPE := 'Vessel/Voyage Data';
-		Select CURRENT_SCHEMA Into DBName from Dummy;
-		If(:DBName = 'MILIVE') Then
-			CALL "MOBIALERT"."Add_Config_Proc" (333,:DocEntry,:transaction_type,:MailID,:Mobile,:EmailCC,:EmailBCC,:ObjectType,:Mobi_TYPE);
-		END IF;
-	End If;
-End If;
+        Mobile := '';
+        EmailCC := 'mgrppc@matangiindustries.com,amexport@matangiindustries.com,export.doc@matangiindustries.com,impex@matangiindustries.com,exports@matangiindustries.com,export.logistic@matangiindustries.com';
+        EmailBCC := 'sap2@matangiindustries.com,sap@matangiindustries.com';
+        ObjectType := 'X';
+        Mobi_TYPE := 'Vessel/Voyage Data';
+
+        SELECT CURRENT_SCHEMA INTO DBName FROM Dummy;
+
+        IF(:DBName = 'MILIVE') THEN
+            CALL "MOBIALERT"."Add_Config_Proc" (333, :DocEntry, :transaction_type, :MailID, :Mobile, :EmailCC, :EmailBCC, :ObjectType, :Mobi_TYPE);
+        END IF;
+    END IF;
+END IF;
 
 ---Sales Order Generate alert to Business Head(SC,DI,OF)----
 IF (:object_type = '17' AND (:transaction_type = 'A' OR :transaction_type = 'U')) THEN
