@@ -22855,7 +22855,7 @@ IF object_type = '20' AND (:transaction_type = 'U') THEN
         T1."U_UNE_QTY", T0."U_UNE_GEDT", T0."U_UNE_VehicleNo", T1."U_PTYPE", T0."BPLId", T0."U_WeighOut";
 
     -- 2. New Condition: Only validate if Packing Type is TANKER% and WeighOut is No
-    IF UPPER(:GRN_PType) LIKE 'TANKER%' AND :WeighOut = 'No' AND GRN_BPLId = 4 THEN
+    IF UPPER(:GRN_PType) LIKE 'TANKER%' AND :WeighOut = 'No' /*AND GRN_BPLId = 4*/ THEN
 
         -- Existing validation logic starts here
         IF :GRN_SlipNo_Num > 0 THEN
@@ -25059,6 +25059,15 @@ IF :object_type = '69' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             END IF;
         END IF;
     END IF;
+END IF;
+
+IF object_type = '20' AND (:transaction_type = 'A' or :transaction_type = 'U') THEN
+DECLARE CustRef Nvarchar(200);
+		select Count(T0."NumAtCard") INTO CustRef from OPDN T0 where T0."DocEntry" = :list_of_cols_val_tab_del;
+		IF  CustRef = 0 THEN
+			error := -1125;
+			error_message := N'Enter Vendor Bill No.';
+		END IF;
 END IF;
 ------------------------------------------------------------------------------------------------
 -- Select the return values-
