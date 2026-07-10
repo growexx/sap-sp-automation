@@ -684,10 +684,10 @@ IF (:object_type = '1470000113' AND (:transaction_type = 'A')) THEN
 
 		SELECT T0."DocEntry" INTO DocEntry FROM OPRQ T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del;
 
-		MailID = 'purchasemgr1@matangiindustries.com,purchase@matangiindustries.com,sanjay@matangiindustries.com,deepak@matangiindustries.com';
+		MailID = 'purchasemgr1@matangiindustries.com,purchase@matangiindustries.com,sanjay@matangiindustries.com,deepak@matangiindustries.com,purchase4@matangiindustries.com,purchasemgr1@matangiindustries.com';
 		Mobile := '';
 		EmailCC := 'mgrppc@matangiindustries.com,ea1@matangiindustries.com,exppc@matangiindustries.com';
-		EmailBCC := 'sap@matangiindustries.com,sap2@matangiindustries.com';
+		EmailBCC := 'sap@matangiindustries.com,sap2@matangiindustries.com,sap1@matangiindustries.com';
 		ObjectType := 'P';
 		Mobi_TYPE := 'RM PR Generated - MILIVE';
 		Select CURRENT_SCHEMA Into DBName from Dummy;
@@ -1223,9 +1223,62 @@ WHERE T0."DocStatus" = 'O' AND T0."CANCELED" = 'N' AND (T1."ItemCode" LIKE 'E%' 
 		END IF;
 	End If;
 End If;
---SELECT * FROM View_Objdet
+----------------------------- GRN of RM is generated Import Charges Unit - I --------------------------------------------
+IF (:object_type = '20' AND (:transaction_type = 'A')) THEN
 
+SELECT COUNT(DISTINCT T0."DocEntry") INTO Temp
+FROM OPDN T0
+INNER JOIN PDN1 T1 ON T0."DocEntry" = T1."DocEntry"
+WHERE T0."DocEntry" =:list_of_cols_val_tab_del
+  AND T0."CANCELED" = 'N'
+  AND T0."BPLId" = '3'
+  AND IFNULL(T1."U_ImportCharges", '') NOT IN ('', 'No');
+
+	If :Temp > 0 then
+
+		SELECT T0."DocEntry" INTO DocEntry FROM OPDN T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del;
+
+		MailID = 'stores@matangiindustries.com,amstore1@matangiindustries.com';
+		Mobile := '';
+		EmailCC := '';
+		EmailBCC := 'sap@matangiindustries.com';
+		ObjectType := 'O';
+		Mobi_TYPE := 'SAP Alert: Landed Cost Require U1';
+		Select CURRENT_SCHEMA Into DBName from Dummy;
+		If(:DBName = 'MILIVE') Then
+			CALL "MOBIALERT"."Add_Config_Proc" (120,:DocEntry,:transaction_type,:MailID,:Mobile,:EmailCC,:EmailBCC,:ObjectType,:Mobi_TYPE);
+		END IF;
+	End If;
+End If;
+----------------------------- GRN of RM is generated Import Charges Unit - II --------------------------------------------
+IF (:object_type = '20' AND (:transaction_type = 'A')) THEN
+
+SELECT COUNT(DISTINCT T0."DocEntry") INTO Temp
+FROM OPDN T0
+INNER JOIN PDN1 T1 ON T0."DocEntry" = T1."DocEntry"
+WHERE T0."DocEntry" =:list_of_cols_val_tab_del
+  AND T0."CANCELED" = 'N'
+  AND T0."BPLId" = '4'
+  AND IFNULL(T1."U_ImportCharges", '') NOT IN ('', 'No');
+
+	If :Temp > 0 then
+
+		SELECT T0."DocEntry" INTO DocEntry FROM OPDN T0 WHERE T0."DocEntry"=:list_of_cols_val_tab_del;
+
+		MailID = 'amstore2@matangiindustries.com,store2@matangiindustries.com';
+		Mobile := '';
+		EmailCC := 'storemgr1@matangiindustries.com';
+		EmailBCC := 'sap@matangiindustries.com';
+		ObjectType := 'T';
+		Mobi_TYPE := 'SAP Alert: Landed Cost Require U2';
+		Select CURRENT_SCHEMA Into DBName from Dummy;
+		If(:DBName = 'MILIVE') Then
+			CALL "MOBIALERT"."Add_Config_Proc" (120,:DocEntry,:transaction_type,:MailID,:Mobile,:EmailCC,:EmailBCC,:ObjectType,:Mobi_TYPE);
+		END IF;
+	End If;
+End If;
+--SELECT * FROM View_Objdet
 -- Select the return values
 select :error, :error_message FROM dummy;
 
-end;
+End;

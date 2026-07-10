@@ -1241,7 +1241,7 @@ IF Object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
          END IF;
          END IF;
 
-        IF CardCodeSO LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
+        /*IF CardCodeSO LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
 			-- 1. EXW (Ex-Works) Validation
 			-- Rule: ONLY Ex-Work is allowed. FOB and Freight MUST be blank.
 			IF (IncoTerm = 'EXW') AND (IFNULL(ExWorkPriceKG, 0.000) = 0.000 OR IFNULL(FOBPriceKG, 0.000) <> 0.000 OR IFNULL(FreightPriceKG, 0.000) <> 0.000) THEN
@@ -1269,7 +1269,7 @@ IF Object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
 			    error := 30095;
 			    error_message := N'For Incoterm ' || IncoTerm || ', both FOB and Freight fields are mandatory at line - ' || MinSO+1;
 			END IF;
-		END IF;
+		END IF;*/
 
             MinSO := MinSO + 1;
         END WHILE;
@@ -1902,7 +1902,7 @@ IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
          END IF;
          END IF;
 
-        IF CardCode LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
+        /*IF CardCode LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
 			-- 1. EXW (Ex-Works) Validation
 			-- Rule: ONLY Ex-Work is allowed. FOB and Freight MUST be blank.
 			IF (IncoTerm = 'EXW') AND (IFNULL(ExWorkPriceKG, 0.000) = 0.000 OR IFNULL(FOBPriceKG, 0.000) <> 0.000 OR IFNULL(FreightPriceKG, 0.000) <> 0.000) THEN
@@ -1930,7 +1930,7 @@ IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
 			    error := 30095;
 			    error_message := N'For Incoterm ' || IncoTerm || ', both FOB and Freight fields are mandatory at line - ' || MinSO+1;
 			END IF;
-		END IF;
+		END IF;*/
 
 
         MinSO := MinSO + 1;
@@ -2249,7 +2249,7 @@ IF :object_type = '22' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
     IF :transaction_type = 'A' AND DocDate >= '2025-11-26' THEN
         SELECT COUNT(T0."ItemCode") INTO TempCounter FROM POR1 T0
         WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ItemCode" LIKE '%RM%' AND T0."ItemCode" NOT LIKE 'OFRM%'
-        AND T0."ItemCode" NOT IN ('PCRM0018', 'PCRM0017', 'SCRM0010', 'OFRM0020', 'OFRM0001' ,'SCRM0016');
+        AND T0."ItemCode" NOT IN ('PCRM0018', 'PCRM0017', 'SCRM0010', 'OFRM0020', 'OFRM0001' ,'SCRM0016','SCRM0065');
 
         SELECT DISTINCT T0."BaseEntry" INTO BaseDocEntry FROM POR1 T0
         WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."VisOrder" = 0;
@@ -2587,7 +2587,7 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
         IF :transaction_type = 'A' AND DocDate >= '2025-11-26' THEN
             SELECT COUNT(T0."ItemCode") INTO TempCounter FROM DRF1 T0
             WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ItemCode" LIKE '%RM%' AND T0."ItemCode" NOT LIKE 'OFRM%' AND T0."ItemCode" NOT LIKE 'SCRM%'
-            AND T0."ItemCode" NOT IN ('PCRM0018', 'PCRM0017', 'SCRM0010', 'OFRM0020', 'OFRM0001' ,'SCRM0016');
+            AND T0."ItemCode" NOT IN ('PCRM0018', 'PCRM0017', 'SCRM0010', 'OFRM0020', 'OFRM0001' ,'SCRM0016','SCRM0065');
 
             SELECT DISTINCT T0."BaseEntry" INTO BaseDocEntry FROM DRF1 T0
             WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."VisOrder" = 0;
