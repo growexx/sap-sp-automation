@@ -1105,7 +1105,7 @@ IF Object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             END IF;
 
             -- Validation 31024: HSN Code Check
-            IF SOItemCode NOT IN ('SER0121', 'WSTG0001') THEN
+            IF SOItemCode NOT IN ('SER0121', 'WSTG0001','SER0038') THEN
                 SELECT concat(concat(concat(concat("Chapter",'.'),"Heading"),'.'),"SubHeading") INTO ItmHSN FROM OCHP T0 INNER JOIN OITM T1 ON T0."AbsEntry" = T1."ChapterID" WHERE T1."ItemCode" = SOItemCode;
                 SELECT concat(concat(concat(concat("Chapter",'.'),"Heading"),'.'),"SubHeading") INTO InvHSN FROM OCHP T0 INNER JOIN DRF1 T1 ON T1."HsnEntry" = T0."AbsEntry" JOIN ODRF ON ODRF."DocEntry" = T1."DocEntry" WHERE T1."DocEntry" = :list_of_cols_val_tab_del AND T1."VisOrder" = MinSO AND ODRF."ObjType" = 17;
                 IF ItmHSN <> InvHSN THEN
@@ -2653,6 +2653,10 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
     DECLARE RM_COUNT INT;
     DECLARE PM_COUNT INT;
     DECLARE DIV_COUNT INT;
+    DECLARE ErrorLine INT;
+    DECLARE PackingType NVARCHAR(200);
+    DECLARE PackingCapacity DOUBLE;
+    DECLARE RowPriority NVARCHAR(10);
 
 	-- Header-Level Validations
 	-----------------------------------------------------------------------------------
@@ -2695,10 +2699,34 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
 		END IF;
 	END IF;*/
 
-	SELECT T0."U_Priority" INTO Priority FROM OPRQ T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
-	IF IFNULL(:Priority, '') = '' THEN
+	SELECT
+	    T0."U_Priority",
+	    SUM(CASE WHEN T1."ItemCode" NOT LIKE '%RM%'
+	              AND T1."ItemCode" NOT LIKE '%PM%'
+	              AND T1."ItemCode" NOT LIKE '%FG%'
+	              AND T1."ItemCode" NOT LIKE '%TR%' THEN 1 ELSE 0 END)
+	INTO Priority, TEMP_COUNTER
+	FROM OPRQ T0
+	JOIN PRQ1 T1 ON T0."DocEntry" = T1."DocEntry"
+	WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+	GROUP BY T0."U_Priority";
+
+	IF :TEMP_COUNTER > 0 AND IFNULL(:Priority, '') = '' THEN
 		error := -41006;
-		error_message := N'Please select PR Priority.';
+		error_message := N'Please select PR Priority at header.';
+	END IF;
+
+	SELECT MIN(T0."VisOrder") INTO ErrorLine
+	FROM PRQ1 T0
+	WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+	  AND (T0."ItemCode" LIKE '%RM%' OR T0."ItemCode" LIKE '%PM%' OR T0."ItemCode" LIKE '%FG%' OR T0."ItemCode" LIKE '%TR%')
+	  AND IFNULL(T0."U_Priority", '') = '';
+
+-- If ErrorLine is not null, an error exists
+	IF :ErrorLine IS NOT NULL THEN
+	    error := -41020;
+	    -- Add +1 because B1 stores VisOrder starting at 0, but users see line 1
+	    error_message := N'Select Priority at row level at line - ' || (:ErrorLine + 1);
 	END IF;
 
 	-- Row-Level Validations (Unified Loop)
@@ -2716,8 +2744,8 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
 
 	WHILE :MIN_ROW <= :MAX_ROW DO
 
-		SELECT T1."ItemCode", T1."Dscription", T1."U_TagNo", T1."OcrCode", T1."U_QCRD", T1."U_CapxOpex", T0."ItemName", T0."ItemType"
-		INTO ItemCode, ItemDescription, TagNo, OcrCode, UDF_QC_RD, UDF_CAPEX_OPEX, MasterItemName, ItemType
+		SELECT T1."ItemCode", T1."Dscription", T1."U_TagNo", T1."OcrCode", T1."U_QCRD", T1."U_CapxOpex", T0."ItemName", T0."ItemType",T1."U_PTYPE",T1."Factor1"
+		INTO ItemCode, ItemDescription, TagNo, OcrCode, UDF_QC_RD, UDF_CAPEX_OPEX, MasterItemName, ItemType,PackingType,PackingCapacity
 		FROM PRQ1 T1
 		LEFT JOIN OITM T0 ON T1."ItemCode" = T0."ItemCode"
 		WHERE T1."DocEntry" = :list_of_cols_val_tab_del AND T1."VisOrder" = :MIN_ROW;
@@ -2830,6 +2858,23 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
 		    error_message := N'Different division materials (PC, SC, OF) cannot be included in the same Purchase Request.';
 		END IF;
 
+		IF (ItemCode like '%RM%' or ItemCode like '%PM%' or ItemCode like '%FG%' or ItemCode like '%TR%') then
+			IF IFNULL(RowPriority,'') = '' then
+				error := -41020;
+			    error_message := N'Select Priority at row level at line - '||MIN_ROW+1;
+			END IF;
+
+			IF ItemCode not like '%PM%' and IFNULL(PackingType,'') = '' then
+				error := -41021;
+			    error_message := N'Select Packing Type at line - '||MIN_ROW+1;
+			END IF;
+
+			IF ItemCode not like '%PM%' and IFNULL(PackingType,'Tanker Load') = 'Tanker Load' and PackingCapacity <= 1.00 then
+				error := -41022;
+			    error_message := N'Select Packing Capacity at line - '||MIN_ROW+1;
+			END IF;
+		END IF;
+
 		MIN_ROW := MIN_ROW + 1;
 	END WHILE;
 END IF;
@@ -2870,6 +2915,10 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 	    DECLARE RM_COUNT INT;
 	    DECLARE PM_COUNT INT;
 	    DECLARE DIV_COUNT INT;
+	    DECLARE ErrorLine INT;
+	    DECLARE PackingType NVARCHAR(200);
+	    DECLARE PackingCapacity DOUBLE;
+	    DECLARE RowPriority NVARCHAR(10);
 
 		-- Header-Level Validations
 		-----------------------------------------------------------------------------------
@@ -2887,11 +2936,35 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 			error_message := N'Required Date cannot be less than the Posting Date.';
 		END IF;
 
-        SELECT T0."U_Priority" INTO Priority FROM ODRF T0 WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."ObjType"='1470000113';
-        IF IFNULL(:Priority, '') = '' THEN
-            error := -41029;
-            error_message := N'Please select PR Priority.';
-        END IF;
+        SELECT
+		    T0."U_Priority",
+		    SUM(CASE WHEN T1."ItemCode" NOT LIKE '%RM%'
+		              AND T1."ItemCode" NOT LIKE '%PM%'
+		              AND T1."ItemCode" NOT LIKE '%FG%'
+		              AND T1."ItemCode" NOT LIKE '%TR%' THEN 1 ELSE 0 END)
+		INTO Priority, TEMP_COUNTER
+		FROM ODRF T0
+		JOIN DRF1 T1 ON T0."DocEntry" = T1."DocEntry"
+		WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+		GROUP BY T0."U_Priority";
+
+		IF :TEMP_COUNTER > 0 AND IFNULL(:Priority, '') = '' THEN
+			error := -41006;
+			error_message := N'Please select PR Priority at header.';
+		END IF;
+
+		SELECT MIN(T0."VisOrder") INTO ErrorLine
+		FROM DRF1 T0
+		WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+		  AND (T0."ItemCode" LIKE '%RM%' OR T0."ItemCode" LIKE '%PM%' OR T0."ItemCode" LIKE '%FG%' OR T0."ItemCode" LIKE '%TR%')
+		  AND IFNULL(T0."U_Priority", '') = '';
+
+-- If ErrorLine is not null, an error exists
+		IF :ErrorLine IS NOT NULL THEN
+		    error := -41020;
+		    -- Add +1 because B1 stores VisOrder starting at 0, but users see line 1
+		    error_message := N'Select Priority at row level at line - ' || (:ErrorLine + 1);
+		END IF;
 
         IF :transaction_type = 'A' THEN
             SELECT DAYS_BETWEEN(:DocDate, NOW()) INTO TEMP_COUNTER FROM DUMMY;
@@ -2932,8 +3005,8 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 		WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
 
 		WHILE :MIN_ROW <= :MAX_ROW DO
-			SELECT T1."ItemCode", T1."Dscription", T1."U_TagNo", T1."OcrCode", T1."U_QCRD", T1."U_CapxOpex", T0."ItemName", T0."ItemType"
-			INTO ItemCode, ItemDescription, TagNo, OcrCode, UDF_QC_RD, UDF_CAPEX_OPEX, MasterItemName, ItemType
+			SELECT T1."ItemCode", T1."Dscription", T1."U_TagNo", T1."OcrCode", T1."U_QCRD", T1."U_CapxOpex", T0."ItemName", T0."ItemType",T1."U_PTYPE",T1."Factor1"
+			INTO ItemCode, ItemDescription, TagNo, OcrCode, UDF_QC_RD, UDF_CAPEX_OPEX, MasterItemName, ItemType,PackingType,PackingCapacity
 			FROM DRF1 T1
 			LEFT JOIN OITM T0 ON T1."ItemCode" = T0."ItemCode"
 			WHERE T1."DocEntry" = :list_of_cols_val_tab_del AND T1."VisOrder" = :MIN_ROW AND T1."ObjType"='1470000113';
@@ -3043,6 +3116,23 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 		IF :DIV_COUNT > 1 THEN
 		    error := -41019;
 		    error_message := N'Different division materials (PC, SC, OF) cannot be included in the same Purchase Request.';
+		END IF;
+
+		IF (ItemCode like '%RM%' or ItemCode like '%PM%' or ItemCode like '%FG%' or ItemCode like '%TR%') then
+			IF IFNULL(RowPriority,'') = '' then
+				error := -41020;
+			    error_message := N'Select Priority at row level at line - '||MIN_ROW+1;
+			END IF;
+
+			IF ItemCode not like '%PM%' and IFNULL(PackingType,'') = '' then
+				error := -41021;
+			    error_message := N'Select Packing Type at line - '||MIN_ROW+1;
+			END IF;
+
+			IF ItemCode not like '%PM%' and IFNULL(PackingType,'Tanker Load') = 'Tanker Load' and PackingCapacity <= 1.00 then
+				error := -41022;
+			    error_message := N'Select Packing Capacity at line - '||MIN_ROW+1;
+			END IF;
 		END IF;
 
 			MIN_ROW := MIN_ROW + 1;
