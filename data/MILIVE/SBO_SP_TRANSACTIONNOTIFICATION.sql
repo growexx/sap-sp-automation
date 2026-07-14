@@ -5201,7 +5201,7 @@ DECLARE ItemGR Nvarchar(50);
 	END WHILE;
 END IF;
 
-IF object_type = '59' AND (:transaction_type = 'A') THEN
+/*IF object_type = '59' AND (:transaction_type = 'A') THEN
 DECLARE MinGR Int;
 DECLARE MaxGR Int;
 DECLARE WhsGR Nvarchar(50);
@@ -5221,7 +5221,7 @@ DECLARE ItemGR Nvarchar(50);
 		END IF;
 		MinGR := MinGR+1;
 	END WHILE;
-END IF;
+END IF;*/
 --------------------------------------
 -- when creating/updating/deleting a Goods Receipt (object_type = 59)
 IF :object_type = '59' AND (:transaction_type = 'A') THEN
@@ -9516,7 +9516,7 @@ DECLARE MaxPR int;
 	END WHILE;
 END IF;
 
-IF object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U')   THEN
+/*IF object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U')   THEN
 Declare ICode Nvarchar(150);
 Declare Iname Nvarchar(500);
 Declare Srs Nvarchar(150);
@@ -9558,7 +9558,7 @@ DECLARE MaxGI int;
 	     	END IF;
 	     MinGI=MinGI+1;
 		END WHILE;
-END IF;
+END IF;*/
 
 IF object_type = '59' AND (:transaction_type = 'A')  THEN
 Declare ICode Nvarchar(150);
@@ -14328,30 +14328,6 @@ if DraftObj = 59 THEN
 		END IF;
 		MinGR := MinGR+1;
 	END WHILE;
-	END IF;
-END IF;
-
-IF object_type='112' AND (:transaction_type = 'A') THEN
-DECLARE MinGR Int;
-DECLARE MaxGR Int;
-DECLARE WhsGR Nvarchar(50);
-DECLARE ItemGR Nvarchar(50);
-(SELECT ODRF."ObjType" into DraftObj FROM ODRF WHERE ODRF."DocEntry"=:list_of_cols_val_tab_del );
-if DraftObj = 59 THEN
-	SELECT Min(T0."VisOrder") INTO MinGR from DRF1 T0 where T0."DocEntry" =:list_of_cols_val_tab_del;
-	SELECT Max(T0."VisOrder") INTO MaxGR from DRF1 T0 where T0."DocEntry" =:list_of_cols_val_tab_del;
-	WHILE MinGR<= MaxGR DO
-		SELECT T1."WhsCode" into WhsGR FROM DRF1 T1 WHERE T1."DocEntry" = :list_of_cols_val_tab_del and T1."VisOrder"=MinGR;
-		SELECT T1."ItemCode" into ItemGR FROM DRF1 T1 WHERE T1."DocEntry" = :list_of_cols_val_tab_del and T1."VisOrder"=MinGR;
-
-		IF WhsGR NOT LIKE '%BT%' THEN
-			IF ItemGR LIKE 'DIRM%' and WhsGR NOT LIKE '%QC%' THEN
-				error :=94;
-				error_message := N'Please Enter Proper Warehouse..';
-			END IF;
-		END IF;
-		MinGR := MinGR+1;
-		END WHILE;
 	END IF;
 END IF;
 

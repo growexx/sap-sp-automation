@@ -1192,7 +1192,7 @@ IF Object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
 			END IF;
 		-- Pallet Code NA allowed only for specific Packing Types
 			IF SOPallet = 'NA'
-			   AND PackingType NOT IN ('IBC Tank', 'ISO Tank', 'Tanker', 'Loose')
+			   AND PackingType NOT IN ('IBC Tank', 'ISO Tank', 'Tanker', 'Loose', 'Vessel')
 			   AND (CardCodeSO NOT LIKE 'C_D%' OR CardCodeSO IN ('CPD0003','CPD0031','CPD0070','CPD0179','CPD0250','CPD0252','CPD0274','CPD0285','CPD0316','CPD0329','CPD0346')) THEN
 			    error := 30094;
 			    error_message := N'Pallet Code is mandatory when Packing Type is other than IBC Tank, ISO Tank, Tanker, or Loose.';
@@ -1241,7 +1241,7 @@ IF Object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
          END IF;
          END IF;
 
-        /*IF CardCodeSO LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
+        IF CardCodeSO LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
 			-- 1. EXW (Ex-Works) Validation
 			-- Rule: ONLY Ex-Work is allowed. FOB and Freight MUST be blank.
 			IF (IncoTerm = 'EXW') AND (IFNULL(ExWorkPriceKG, 0.000) = 0.000 OR IFNULL(FOBPriceKG, 0.000) <> 0.000 OR IFNULL(FreightPriceKG, 0.000) <> 0.000) THEN
@@ -1269,7 +1269,7 @@ IF Object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
 			    error := 30095;
 			    error_message := N'For Incoterm ' || IncoTerm || ', both FOB and Freight fields are mandatory at line - ' || MinSO+1;
 			END IF;
-		END IF;*/
+		END IF;
 
             MinSO := MinSO + 1;
         END WHILE;
@@ -1853,7 +1853,7 @@ END IF;
 
 -- Pallet Code NA allowed only for specific Packing Types
 IF SOPallet = 'NA'
-   AND PackingType NOT IN ('IBC Tank', 'ISO Tank', 'Tanker', 'Loose')
+   AND PackingType NOT IN ('IBC Tank', 'ISO Tank', 'Tanker', 'Loose', 'Vessel')
    AND (CardCode NOT LIKE 'C_D%' OR CardCode IN ('CPD0003','CPD0031','CPD0070','CPD0179','CPD0250','CPD0252','CPD0274','CPD0285','CPD0316','CPD0329','CPD0346')) THEN
     error := 30094;
     error_message := N'Pallet Code is mandatory when Packing Type is other than IBC Tank, ISO Tank, Tanker, or Loose.';
@@ -1902,7 +1902,7 @@ IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
          END IF;
          END IF;
 
-        /*IF CardCode LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
+        IF CardCode LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
 			-- 1. EXW (Ex-Works) Validation
 			-- Rule: ONLY Ex-Work is allowed. FOB and Freight MUST be blank.
 			IF (IncoTerm = 'EXW') AND (IFNULL(ExWorkPriceKG, 0.000) = 0.000 OR IFNULL(FOBPriceKG, 0.000) <> 0.000 OR IFNULL(FreightPriceKG, 0.000) <> 0.000) THEN
@@ -1930,7 +1930,7 @@ IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
 			    error := 30095;
 			    error_message := N'For Incoterm ' || IncoTerm || ', both FOB and Freight fields are mandatory at line - ' || MinSO+1;
 			END IF;
-		END IF;*/
+		END IF;
 
 
         MinSO := MinSO + 1;
@@ -2744,8 +2744,8 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
 
 	WHILE :MIN_ROW <= :MAX_ROW DO
 
-		SELECT T1."ItemCode", T1."Dscription", T1."U_TagNo", T1."OcrCode", T1."U_QCRD", T1."U_CapxOpex", T0."ItemName", T0."ItemType",T1."U_PTYPE",T1."Factor1"
-		INTO ItemCode, ItemDescription, TagNo, OcrCode, UDF_QC_RD, UDF_CAPEX_OPEX, MasterItemName, ItemType,PackingType,PackingCapacity
+		SELECT T1."ItemCode", T1."Dscription", T1."U_TagNo", T1."OcrCode", T1."U_QCRD", T1."U_CapxOpex", T0."ItemName", T0."ItemType",T1."U_PTYPE",T1."Factor1",T1."U_Priority"
+		INTO ItemCode, ItemDescription, TagNo, OcrCode, UDF_QC_RD, UDF_CAPEX_OPEX, MasterItemName, ItemType,PackingType,PackingCapacity,RowPriority
 		FROM PRQ1 T1
 		LEFT JOIN OITM T0 ON T1."ItemCode" = T0."ItemCode"
 		WHERE T1."DocEntry" = :list_of_cols_val_tab_del AND T1."VisOrder" = :MIN_ROW;
@@ -3005,8 +3005,8 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 		WHERE T0."DocEntry" = :list_of_cols_val_tab_del;
 
 		WHILE :MIN_ROW <= :MAX_ROW DO
-			SELECT T1."ItemCode", T1."Dscription", T1."U_TagNo", T1."OcrCode", T1."U_QCRD", T1."U_CapxOpex", T0."ItemName", T0."ItemType",T1."U_PTYPE",T1."Factor1"
-			INTO ItemCode, ItemDescription, TagNo, OcrCode, UDF_QC_RD, UDF_CAPEX_OPEX, MasterItemName, ItemType,PackingType,PackingCapacity
+			SELECT T1."ItemCode", T1."Dscription", T1."U_TagNo", T1."OcrCode", T1."U_QCRD", T1."U_CapxOpex", T0."ItemName", T0."ItemType",T1."U_PTYPE",T1."Factor1",T1."U_Priority"
+			INTO ItemCode, ItemDescription, TagNo, OcrCode, UDF_QC_RD, UDF_CAPEX_OPEX, MasterItemName, ItemType,PackingType,PackingCapacity,RowPriority
 			FROM DRF1 T1
 			LEFT JOIN OITM T0 ON T1."ItemCode" = T0."ItemCode"
 			WHERE T1."DocEntry" = :list_of_cols_val_tab_del AND T1."VisOrder" = :MIN_ROW AND T1."ObjType"='1470000113';
@@ -3767,7 +3767,6 @@ END IF;*/
 
 -------------2PC-FLOR
 ----------------UNIT-II-----Goods issue------
-
 IF object_type = '60' AND (:transaction_type = 'A') THEN
 DECLARE MinGI Int;
 DECLARE MaxGI Int;
@@ -10659,7 +10658,7 @@ DECLARE MaxPR int;
 
 END IF;
 
-IF object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U')   THEN
+/*IF object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U')   THEN
 Declare ICode Nvarchar(150);
 Declare Iname Nvarchar(150);
 Declare Srs Nvarchar(150);
@@ -10701,7 +10700,7 @@ DECLARE MaxGI int;
 	     	END IF;
 	     MinGI=MinGI+1;
 		END WHILE;
-END IF;
+END IF;*/
 
 IF object_type = '59' AND (:transaction_type = 'A' OR :transaction_type = 'U')   THEN
 Declare ICode Nvarchar(150);
@@ -25261,6 +25260,93 @@ IF :object_type = '69' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             END IF;
         END IF;
     END IF;
+END IF;
+-----------------------------------------------------------------------------------------------------------------
+-- JOBWORK TRANSACTION VALIDATION FOR GOODS RECEIPT (OIGN / IGN1)
+-----------------------------------------------------------------------------------------------------------------
+
+IF :object_type = '59' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+
+    DECLARE SeriesName NVARCHAR(100) := '';
+    DECLARE JobworkFirmCode INT := -1;
+
+    -- Safe SeriesName Assignment
+    SeriesName := IFNULL((
+        SELECT TOP 1 T1."SeriesName"
+        FROM OIGN T0
+        INNER JOIN NNM1 T1 ON T0."Series" = T1."Series"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+    ), '');
+
+    -- Cache the Jobwork FirmCode to optimize performance
+    JobworkFirmCode := IFNULL((SELECT TOP 1 "FirmCode" FROM OMRC WHERE "FirmName" = 'Jobwork'), -1);
+
+    -----------------------------------------------------------------------------------------------
+    -- VALIDATION 1: Enforce OIGN Header UDFs ONLY IF it's a Jobwork Series & Warehouse is JW-CRM
+    -----------------------------------------------------------------------------------------------
+    IF :SeriesName LIKE 'JT%' THEN
+        IF EXISTS (
+            SELECT 1
+            FROM OIGN T0
+            INNER JOIN IGN1 T1 ON T0."DocEntry" = T1."DocEntry"
+            INNER JOIN OITM T2 ON T1."ItemCode" = T2."ItemCode"
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T2."FirmCode" = :JobworkFirmCode
+              AND T1."WhsCode" = 'JW-CRM'
+              AND (
+                  IFNULL(T0."U_UNE_JVNM", '') = ''
+                  OR IFNULL(T0."U_UNE_JVAD", '') = ''
+                  -- Verified Header Field Names
+                  OR IFNULL(T0."U_UNE_JVNM", '') = ''
+                  OR IFNULL(T0."U_UNE_TransportName", '') = ''
+                  OR IFNULL(T0."U_UNE_VehicleNo", '') = ''
+                  OR IFNULL(T0."U_UNE_LRNo", '') = ''
+              )
+        ) THEN
+            error := 30001;
+            error_message := 'Missing required fields: Please fill Header Transport, Vehicle, and LR details for Unit-I Job Work.';
+        END IF;
+    END IF;
+
+    -----------------------------------------------------------------------------------------------
+    -- VALIDATION 2: If Series is 'JT%', block any non-Jobwork items or wrong warehouses completely
+    -----------------------------------------------------------------------------------------------
+    IF :error = 0 AND :SeriesName LIKE 'JT%' THEN
+        IF EXISTS (
+            SELECT 1
+            FROM IGN1 T0
+            INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND (
+                  T1."FirmCode" <> :JobworkFirmCode
+                  OR T0."WhsCode" <> 'JW-CRM'
+              )
+        ) THEN
+            error := 30002;
+            error_message := 'Series JT% is restricted to Jobwork items and Warehouse JW-CRM only.';
+        END IF;
+    END IF;
+
+    -----------------------------------------------------------------------------------------------
+    -- VALIDATION 3: Universal Check - Stop anyone from using 'JW-CRM' on regular entries
+    -----------------------------------------------------------------------------------------------
+    IF :error = 0 THEN
+        IF EXISTS (
+            SELECT 1
+            FROM IGN1 T0
+            INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T0."WhsCode" = 'JW-CRM'
+              AND (
+                  T1."FirmCode" <> :JobworkFirmCode
+                  OR :SeriesName NOT LIKE 'JT%'
+              )
+        ) THEN
+            error := 30003;
+            error_message := 'Warehouse JW-CRM can only be accessed via JT% series and Jobwork items.';
+        END IF;
+    END IF;
+
 END IF;
 -- Select the return values-
 select :error, :error_message FROM dummy;
