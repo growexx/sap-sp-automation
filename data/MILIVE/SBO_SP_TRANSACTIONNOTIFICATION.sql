@@ -2886,15 +2886,15 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
 			    error_message := N'Select Priority at row level at line - '||MIN_ROW+1;
 			END IF;
 
-			/*IF ItemCode not like '%PM%' and IFNULL(PackingType,'') = '' then
+			IF ItemCode not like '%PM%' and IFNULL(PackingType,'') = '' then
 				error := -41021;
 			    error_message := N'Select Packing Type at line - '||MIN_ROW+1;
 			END IF;
 
-			IF ItemCode not like '%PM%' and IFNULL(PackingType,'Tanker Load') = 'Tanker Load' and PackingCapacity < 1.00 then
+			IF ItemCode not like '%PM%' and IFNULL(PackingType,'Tanker Load') = 'Tanker Load' and PackingCapacity <= 1.00 then
 				error := -41022;
 			    error_message := N'Select Packing Capacity at line - '||MIN_ROW+1;
-			END IF;*/
+			END IF;
 		END IF;
 
 		MIN_ROW := MIN_ROW + 1;
@@ -3140,15 +3140,15 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 			    error_message := N'Select Priority at row level at line - '||MIN_ROW+1;
 			END IF;
 
-			/*IF ItemCode not like '%PM%' and IFNULL(PackingType,'') = '' then
+			IF ItemCode not like '%PM%' and IFNULL(PackingType,'') = '' then
 				error := -41021;
 			    error_message := N'Select Packing Type at line - '||MIN_ROW+1;
 			END IF;
 
-			IF ItemCode not like '%PM%' and IFNULL(PackingType,'Tanker Load') = 'Tanker Load' and PackingCapacity < 1.00 then
+			IF ItemCode not like '%PM%' and IFNULL(PackingType,'Tanker Load') = 'Tanker Load' and PackingCapacity <= 1.00 then
 				error := -41022;
 			    error_message := N'Select Packing Capacity at line - '||MIN_ROW+1;
-			END IF;*/
+			END IF;
 		END IF;
 
 			MIN_ROW := MIN_ROW + 1;
@@ -5193,7 +5193,7 @@ DECLARE ItemGR Nvarchar(50);
 		SELECT T1."WhsCode" into WhsGR FROM IGN1 T1 WHERE T1."DocEntry" = :list_of_cols_val_tab_del and T1."VisOrder"=MinGR;
 		SELECT T1."ItemCode" into ItemGR FROM IGN1 T1 WHERE T1."DocEntry" = :list_of_cols_val_tab_del and T1."VisOrder"=MinGR;
 
-		IF ItemGR LIKE 'DIFG%' and WhsGR NOT LIKE '%QC' and ItemGR <> 'DIFG0017' and ItemGR <> 'DIFG0014' and ItemGR <> 'DIFG0024' and ItemGR <> 'DIFG0027' and ItemGR <> 'DIFG0025' THEN
+		IF ItemGR LIKE 'DIFG%' and WhsGR NOT LIKE '%QC' and ItemGR <> 'DIFG0017' and ItemGR <> 'DIFG0014' and ItemGR <> 'DIFG0024' and ItemGR <> 'DIFG0027' THEN
 			error :=-933;
 			error_message := N'Please Enter Proper Warehouse....';
 		END IF;
@@ -18183,7 +18183,7 @@ if DraftObj = 60 THEN
 END IF;
 END IF;
 
-IF object_type='112' AND (:transaction_type = 'U' OR :transaction_type = 'A') THEN
+/*IF object_type='112' AND (:transaction_type = 'U' OR :transaction_type = 'A') THEN
 DECLARE Pterm Nvarchar(150);
 DECLARE Rate Int;
 DECLARE Bsdoc Int;
@@ -18224,7 +18224,7 @@ if DraftObj = 13 THEN
 		END WHILE;
 	END IF;
 END IF;
-END IF;
+END IF;*/
 
 IF Object_type = '112' and (:transaction_type ='A') Then
 Declare Code1 nvarchar(50);
@@ -20957,6 +20957,8 @@ IF object_type = '20' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
     DECLARE hasRM INT;
     DECLARE Series Nvarchar(250);
     DECLARE DocDate Date;
+    DECLARE error int;
+    DECLARE error_message nvarchar(200);
 
 	SELECT T1."SeriesName" into Series FROM OPDN T0 JOIN NNM1 T1 ON T1."Series" = T0."Series" WHERE T0."DocEntry"=:list_of_cols_val_tab_del;
 
@@ -20972,12 +20974,12 @@ IF object_type = '20' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
 				SELECT T0."ItemCode",T0."LineNum",T0."BaseLine",T0."Quantity",T0."Factor1" INTO CurrentItemCode, LineNum,BaseLine,GRNQty,GRNPackCapacity FROM PDN1 T0
 				WHERE T0."DocEntry" = :list_of_cols_val_tab_del AND T0."VisOrder" = :MinGRN;
 
-					IF (CurrentItemCode like '%RM%' OR CurrentItemCode like '%FG%' OR CurrentItemCode like '%TR%') AND :BaseEntry IS NOT NULL THEN
+					IF (CurrentItemCode like '%RM%' OR CurrentItemCode like '%FG%' OR CurrentItemCode like '%TR%' OR CurrentItemCode like '%TR%') AND :BaseEntry IS NOT NULL THEN
 			            -- Get the expected packing code from PO
 			            SELECT IFNULL(P."U_Pcode",'0'),IFNULL(P."Factor1",'0') INTO PackingCode,POPackCapacity FROM POR1 P WHERE P."DocEntry" = :BaseEntry AND P."LineNum" = :BaseLine;
 
 			            -- Only proceed with validation if we have a packing code in the PO
-			            IF IFNULL(PackingCode,'0') <> '0' THEN
+			            IF :PackingCode IS NOT NULL THEN
 			                -- Check if the packing code exists in the GRN
 			                SELECT COUNT(*) INTO IsPackingFound
 			                FROM PDN1 G
@@ -22795,7 +22797,7 @@ IF object_type = '20' AND (:transaction_type = 'U') THEN
         T1."U_UNE_QTY", T0."U_UNE_GEDT", T0."U_UNE_VehicleNo", T1."U_PTYPE", T0."BPLId", T0."U_WeighOut";
 
     -- 2. New Condition: Only validate if Packing Type is TANKER% and WeighOut is No
-    IF UPPER(:GRN_PType) LIKE 'TANKER%' AND :WeighOut = 'No' /*AND GRN_BPLId = 4*/ THEN
+    IF UPPER(:GRN_PType) LIKE 'TANKER%' AND :WeighOut = 'No' AND GRN_BPLId = 4 THEN
 
         -- Existing validation logic starts here
         IF :GRN_SlipNo_Num > 0 THEN

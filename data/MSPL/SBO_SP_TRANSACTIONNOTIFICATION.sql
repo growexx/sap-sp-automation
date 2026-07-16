@@ -25332,6 +25332,214 @@ IF :object_type = '59' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
         END IF;
     END IF;
 END IF;
+-----------------------------------------------------------------------------------------------------------------
+-- JOBWORK TRANSACTION VALIDATION FOR INVENTORY TRANSFER (OWTR / WTR1 / WTR21)
+-----------------------------------------------------------------------------------------------------------------
+IF :object_type = '67' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+
+    -----------------------------------------------------------------------------------------------
+    -- CONDITION A: IF THE TRANSFER IS USING THE JOBWORK SERIES (JT%)
+    -----------------------------------------------------------------------------------------------
+    IF EXISTS (
+        SELECT 1
+        FROM OWTR T0
+        INNER JOIN NNM1 T1 ON T0."Series" = T1."Series"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+          AND T1."SeriesName" LIKE 'JT%'
+    ) THEN
+
+        -- 1. Item Gatekeeper: Every row item code must belong to the 'Jobwork' FirmCode
+        IF EXISTS (
+            SELECT 1
+            FROM WTR1 T0
+            INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T1."FirmCode" <> (SELECT TOP 1 "FirmCode" FROM OMRC WHERE "FirmName" = 'Jobwork')
+        ) THEN
+            error := 67001;
+            error_message := 'Series JT is strictly restricted to Jobwork items only.';
+        END IF;
+
+        -- 2. Warehouse Gatekeeper: From Warehouse must be 'JW-CRM' and To Warehouse must be 'JW-VRM'
+        IF :error = 0 AND EXISTS (
+            SELECT 1
+            FROM WTR1 T0
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND (T0."FromWhsCod" <> 'JW-CRM' OR T0."WhsCode" <> 'JW-VRM')
+        ) THEN
+            error := 67002;
+            error_message := 'Jobwork transfers must move from Warehouse JW-CRM to Warehouse JW-VRM.';
+        END IF;
+
+        -- 3. Enforce Exact Header UDFs (Transport Name, Vehicle No, LR No)
+        IF :error = 0 AND EXISTS (
+            SELECT 1
+            FROM OWTR T0
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND (
+                  IFNULL(T0."U_UNE_TransportName", '') = ''
+                  OR IFNULL(T0."U_UNE_VehicleNo", '') = ''
+                  OR IFNULL(T0."U_UNE_LRNo", '') = ''
+              )
+        ) THEN
+            error := 67003;
+            error_message := 'Missing required fields: Please fill Transport Name, Vehicle No, and LR No.';
+        END IF;
+
+        -- 4. Mandatory Reference Link: Must map to a Goods Receipt (Object Type 59)
+        IF :error = 0 AND NOT EXISTS (
+            SELECT 1
+            FROM WTR21
+            WHERE "DocEntry" = :list_of_cols_val_tab_del
+              AND "RefObjType" = '59'
+        ) THEN
+            error := 67005;
+            error_message := 'Reference document link is mandatory for JT Series and must be a Goods Receipt entry.';
+        END IF;
+
+        -- 5. Duplicate Prevention: Ensure this specific Goods Receipt has not been linked elsewhere before
+        IF :error = 0 AND EXISTS (
+            SELECT 1
+            FROM WTR21 R1
+            INNER JOIN WTR21 R2 ON R1."RefDocEntr" = R2."RefDocEntr" AND R1."RefObjType" = R2."RefObjType"
+            WHERE R1."DocEntry" = :list_of_cols_val_tab_del
+              AND R1."RefObjType" = '59'
+              AND R2."DocEntry" <> :list_of_cols_val_tab_del
+        ) THEN
+            error := 67006;
+            error_message := 'This Goods Receipt has already been linked to another Inventory Transfer transaction.';
+        END IF;
+
+        -- 6. Item & Quantity Cross-Verification: Match IT totals exactly against the linked Goods Receipt
+        IF :error = 0 AND EXISTS (
+            SELECT 1
+            FROM (
+                -- Total quantities currently on the Inventory Transfer
+                SELECT "ItemCode", SUM("Quantity") AS "ITQty"
+                FROM WTR1
+                WHERE "DocEntry" = :list_of_cols_val_tab_del
+                GROUP BY "ItemCode"
+            ) T_IT
+            FULL OUTER JOIN (
+                -- Total quantities established on the linked Goods Receipt
+                SELECT G1."ItemCode", SUM(G1."Quantity") AS "GRQty"
+                FROM IGN1 G1
+                INNER JOIN WTR21 R1 ON G1."DocEntry" = R1."RefDocEntr"
+                WHERE R1."DocEntry" = :list_of_cols_val_tab_del
+                  AND R1."RefObjType" = '59'
+                GROUP BY G1."ItemCode"
+            ) T_GR ON T_IT."ItemCode" = T_GR."ItemCode"
+            WHERE IFNULL(T_IT."ITQty", 0) <> IFNULL(T_GR."GRQty", 0)
+        ) THEN
+            error := 67007;
+            error_message := 'Item/Quantity mismatch: Transfer row items and quantities must perfectly match the referenced Goods Receipt.';
+        END IF;
+
+    END IF;
+
+    -----------------------------------------------------------------------------------------------
+    -- CONDITION B: IF THE TRANSFER IS NOT USING A JOBWORK SERIES (Regular Company Entry)
+    -----------------------------------------------------------------------------------------------
+    IF NOT EXISTS (
+        SELECT 1
+        FROM OWTR T0
+        INNER JOIN NNM1 T1 ON T0."Series" = T1."Series"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+          AND T1."SeriesName" LIKE 'JT%'
+    ) THEN
+
+        -- Vice Versa Lock: Keep regular transfers clean from Jobwork items or specialized warehouses
+        IF EXISTS (
+            SELECT 1
+            FROM WTR1 T0
+            INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND (
+                  T1."FirmCode" = (SELECT TOP 1 "FirmCode" FROM OMRC WHERE "FirmName" = 'Jobwork')
+                  OR T0."FromWhsCod" IN ('JW-CRM', 'JW-VRM')
+                  OR T0."WhsCode" IN ('JW-CRM', 'JW-VRM')
+              )
+        ) THEN
+            error := 67004;
+            error_message := 'Regular series documents cannot contain Jobwork items or use Jobwork Warehouses (JW-CRM/JW-VRM).';
+        END IF;
+    END IF;
+END IF;
+-----------------------------------------------------------------------------------------------------------------
+-- JOBWORK TRANSACTION VALIDATION FOR PRODUCTION ORDER (OWOR / WOR1)
+-----------------------------------------------------------------------------------------------------------------
+IF :object_type = '202' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+
+    -----------------------------------------------------------------------------------------------
+    -- 1. EXPLICIT LOCK: IF parent item is 'Jobwork', the series MUST be 'JT%'
+    -----------------------------------------------------------------------------------------------
+    IF EXISTS (
+        SELECT 1
+        FROM OWOR T0
+        INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
+        INNER JOIN OMRC T2 ON T1."FirmCode" = T2."FirmCode"
+        INNER JOIN NNM1 T3 ON T0."Series" = T3."Series"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+          AND T2."FirmName" = 'Jobwork'
+          AND IFNULL(T3."SeriesName", '') NOT LIKE 'JT%'
+    ) THEN
+        error := 20201;
+        error_message := 'Invalid Series: If the parent item is a Jobwork item, you must use a JT series document.';
+    END IF;
+
+    -----------------------------------------------------------------------------------------------
+    -- 2. SERIES CHECK: IF Series is 'JT%', Parent Item MUST be Jobwork
+    -----------------------------------------------------------------------------------------------
+    IF :error = 0 AND EXISTS (
+        SELECT 1
+        FROM OWOR T0
+        INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
+        INNER JOIN OMRC T2 ON T1."FirmCode" = T2."FirmCode"
+        INNER JOIN NNM1 T3 ON T0."Series" = T3."Series"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+          AND IFNULL(T3."SeriesName", '') LIKE 'JT%'
+          AND T2."FirmName" <> 'Jobwork'
+    ) THEN
+        error := 20202;
+        error_message := 'Series JT is strictly restricted to Jobwork parent items only.';
+    END IF;
+
+    -----------------------------------------------------------------------------------------------
+    -- 3. COMPONENT CHECK: IF Series is 'JT%', All Rows MUST be Jobwork Components
+    -----------------------------------------------------------------------------------------------
+    IF :error = 0 AND EXISTS (
+        SELECT 1
+        FROM OWOR T0
+        INNER JOIN NNM1 T1 ON T0."Series" = T1."Series"
+        INNER JOIN WOR1 T2 ON T0."DocEntry" = T2."DocEntry"
+        INNER JOIN OITM T3 ON T2."ItemCode" = T3."ItemCode"
+        INNER JOIN OMRC T4 ON T3."FirmCode" = T4."FirmCode"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+          AND IFNULL(T1."SeriesName", '') LIKE 'JT%'
+          AND T4."FirmName" <> 'Jobwork'
+    ) THEN
+        error := 20203;
+        error_message := 'All component items assigned to a JT Production Order must belong to the Jobwork category.';
+    END IF;
+
+    -----------------------------------------------------------------------------------------------
+    -- 4. VICE VERSA COMPONENT LOCK: Regular Series CANNOT contain any Jobwork Components
+    -----------------------------------------------------------------------------------------------
+    IF :error = 0 AND EXISTS (
+        SELECT 1
+        FROM OWOR T0
+        INNER JOIN NNM1 T1 ON T0."Series" = T1."Series"
+        INNER JOIN WOR1 T2 ON T0."DocEntry" = T2."DocEntry"
+        INNER JOIN OITM T3 ON T2."ItemCode" = T3."ItemCode"
+        INNER JOIN OMRC T4 ON T3."FirmCode" = T4."FirmCode"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+          AND IFNULL(T1."SeriesName", '') NOT LIKE 'JT%'
+          AND T4."FirmName" = 'Jobwork'
+    ) THEN
+        error := 20204;
+        error_message := 'Transaction blocked: Regular Production Orders cannot contain Jobwork components.';
+    END IF;
+END IF;
 -- Select the return values-
 select :error, :error_message FROM dummy;
 
