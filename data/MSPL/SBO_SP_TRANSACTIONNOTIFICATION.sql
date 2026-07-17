@@ -957,9 +957,13 @@ IF Object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
         		error := 31026;
         		error_message := N'Please Enter License Number in Sales Contract. [DRAFT]';
         	END IF;
-            IF (SOItemCode LIKE 'PC%' OR SOItemCode LIKE 'SC%') AND Qty > 150000 THEN
+            IF (SOItemCode LIKE 'PC%') AND Qty > 150000 THEN
                 error := 31027;
                 error_message := N'Quantity cannot exceed 150 MT for this item. [DRAFT]';
+            END IF;
+            IF (SOItemCode LIKE 'SC%') AND Qty > 1000000 THEN
+                error := 31027;
+                error_message := N'Quantity cannot exceed 1000 MT for this item. [DRAFT]';
             END IF;
             IF (SOItemCode LIKE 'OF%') AND Qty > 2200000 THEN
                 error := 31028;
@@ -1241,7 +1245,7 @@ IF Object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
          END IF;
          END IF;
 
-        /*IF CardCodeSO LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
+        IF CardCodeSO LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
 			-- 1. EXW (Ex-Works) Validation
 			-- Rule: ONLY Ex-Work is allowed. FOB and Freight MUST be blank.
 			IF (IncoTerm = 'EXW') AND (IFNULL(ExWorkPriceKG, 0.000) = 0.000 OR IFNULL(FOBPriceKG, 0.000) <> 0.000 OR IFNULL(FreightPriceKG, 0.000) <> 0.000) THEN
@@ -1269,7 +1273,7 @@ IF Object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
 			    error := 30095;
 			    error_message := N'For Incoterm ' || IncoTerm || ', both FOB and Freight fields are mandatory at line - ' || MinSO+1;
 			END IF;
-		END IF;*/
+		END IF;
 
             MinSO := MinSO + 1;
         END WHILE;
@@ -1622,9 +1626,13 @@ IF Object_type = '17' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
         	error := 32025;
         	error_message := N'Please Enter License Number in Sales Contract';
         END IF;
-        IF (SOItemCode LIKE 'PC%' OR SOItemCode LIKE 'SC%') AND Qty > 150000 THEN
+        IF (SOItemCode LIKE 'PC%') AND Qty > 150000 THEN
             error := 32025;
             error_message := N'Quantity cannot exceed 150 MT for this item.';
+        END IF;
+        IF (SOItemCode LIKE 'SC%') AND Qty > 1000000 THEN
+            error := 32025;
+            error_message := N'Quantity cannot exceed 1000 MT for this item.';
         END IF;
         IF (SOItemCode LIKE 'OF%') AND Qty > 2200000 THEN
             error := 32025;
@@ -1704,7 +1712,7 @@ IF Object_type = '17' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
         END IF;
 
         -- Validation 32032: HSN Code Check
-        IF SOItemCode NOT IN ('SER0121', 'WSTG0001') THEN
+        IF SOItemCode NOT IN ('SER0121', 'WSTG0001','SER0038') THEN
             SELECT concat(concat(concat(concat("Chapter",'.'),"Heading"),'.'),"SubHeading") INTO ItmHSN FROM OCHP T0 INNER JOIN OITM T1 ON T0."AbsEntry" = T1."ChapterID" WHERE T1."ItemCode" = SOItemCode;
             SELECT concat(concat(concat(concat("Chapter",'.'),"Heading"),'.'),"SubHeading") INTO InvHSN FROM OCHP T0 INNER JOIN RDR1 T1 ON T1."HsnEntry" = T0."AbsEntry" WHERE T1."DocEntry" = :list_of_cols_val_tab_del AND T1."VisOrder" = MinSO;
             IF ItmHSN <> InvHSN THEN
@@ -1902,7 +1910,7 @@ IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
          END IF;
          END IF;
 
-        /*IF CardCode LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
+        IF CardCode LIKE 'C_E%' AND SODate >= '2026-06-05' THEN
 			-- 1. EXW (Ex-Works) Validation
 			-- Rule: ONLY Ex-Work is allowed. FOB and Freight MUST be blank.
 			IF (IncoTerm = 'EXW') AND (IFNULL(ExWorkPriceKG, 0.000) = 0.000 OR IFNULL(FOBPriceKG, 0.000) <> 0.000 OR IFNULL(FreightPriceKG, 0.000) <> 0.000) THEN
@@ -1930,7 +1938,7 @@ IF LEFT(SOItemCode, 2) IN ('SC', 'PC', 'OF', 'DI') THEN
 			    error := 30095;
 			    error_message := N'For Incoterm ' || IncoTerm || ', both FOB and Freight fields are mandatory at line - ' || MinSO+1;
 			END IF;
-		END IF;*/
+		END IF;
 
 
         MinSO := MinSO + 1;
@@ -25539,6 +25547,186 @@ IF :object_type = '202' AND (:transaction_type = 'A' OR :transaction_type = 'U')
         error := 20204;
         error_message := 'Transaction blocked: Regular Production Orders cannot contain Jobwork components.';
     END IF;
+END IF;
+-----------------------------------------------------------------------------------------------------------------
+-- JOBWORK TRANSACTION VALIDATION FOR ISSUE FOR PRODUCTION (OIGE / IGE1)
+-----------------------------------------------------------------------------------------------------------------
+
+IF :object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+
+    -----------------------------------------------------------------------------------------------
+    -- 1. GATEKEEPER: JT Series must only use JW-VRM warehouse and Jobwork item categories
+    -----------------------------------------------------------------------------------------------
+    IF EXISTS (
+        SELECT 1
+        FROM OIGE T0
+        INNER JOIN NNM1 T1 ON T0."Series" = T1."Series"
+        INNER JOIN IGE1 T2 ON T0."DocEntry" = T2."DocEntry"
+        INNER JOIN OITM T3 ON T2."ItemCode" = T3."ItemCode"
+        INNER JOIN OMRC T4 ON T3."FirmCode" = T4."FirmCode"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+          AND IFNULL(T1."SeriesName", '') LIKE 'JT%'
+          AND (T2."WhsCode" <> 'JW-VRM' OR T4."FirmName" <> 'Jobwork')
+    ) THEN
+        error := 60010;
+        error_message := 'JT series documents are restricted to Jobwork items and Warehouse JW-VRM only.';
+    END IF;
+
+    -----------------------------------------------------------------------------------------------
+    -- 2. MANDATORY CHECK: Challan 1 details are mandatory. Remaining slots must be fully filled if used.
+    -----------------------------------------------------------------------------------------------
+    IF :error = 0 AND EXISTS (
+        SELECT 1
+        FROM OIGE T0
+        INNER JOIN NNM1 T1 ON T0."Series" = T1."Series"
+        INNER JOIN IGE1 T2 ON T0."DocEntry" = T2."DocEntry"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+          AND IFNULL(T1."SeriesName", '') LIKE 'JT%'
+          AND (
+              -- Slot 1: Strictly mandatory for JT series documents
+              IFNULL(T2."U_JobChallan1", 0) = 0
+              OR IFNULL(TO_VARCHAR(T2."U_JWDate"), '') = ''
+              OR IFNULL(T2."U_JCQty1", 0) = 0
+
+              -- Slot 2: Mandatory if a Challan No is entered
+              OR (IFNULL(T2."U_JobChallan2", 0) <> 0 AND (IFNULL(TO_VARCHAR(T2."U_JWDate2"), '') = '' OR IFNULL(T2."U_JCQty2", 0) = 0))
+
+              -- Slot 3: Mandatory if a Challan No is entered
+              OR (IFNULL(T2."U_JobChallan3", 0) <> 0 AND (IFNULL(TO_VARCHAR(T2."U_JWDate3"), '') = '' OR IFNULL(T2."U_JCQty3", 0) = 0))
+
+              -- Slot 4: Mandatory if a Challan No is entered
+              OR (IFNULL(T2."U_JobChallan4", 0) <> 0 AND (IFNULL(TO_VARCHAR(T2."U_JWDate4"), '') = '' OR IFNULL(T2."U_JWQty4", 0) = 0))
+          )
+    ) THEN
+        error := 60014;
+        error_message := 'Mandatory Fields Missing: Jobwork Challan Number, Date, and Quantity must be filled out completely.';
+    END IF;
+
+    -----------------------------------------------------------------------------------------------
+    -- 3. DUPLICATE CHECK: Prevent entering the same Inventory Transfer DocNum on the same line
+    -----------------------------------------------------------------------------------------------
+    IF :error = 0 AND EXISTS (
+        SELECT 1
+        FROM OIGE T0
+        INNER JOIN NNM1 T1 ON T0."Series" = T1."Series"
+        INNER JOIN IGE1 T2 ON T0."DocEntry" = T2."DocEntry"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+          AND IFNULL(T1."SeriesName", '') LIKE 'JT%'
+          AND (
+              (IFNULL(T2."U_JobChallan1", 0) <> 0 AND T2."U_JobChallan1" IN (T2."U_JobChallan2", T2."U_JobChallan3", T2."U_JobChallan4"))
+              OR (IFNULL(T2."U_JobChallan2", 0) <> 0 AND T2."U_JobChallan2" IN (T2."U_JobChallan3", T2."U_JobChallan4"))
+              OR (IFNULL(T2."U_JobChallan3", 0) <> 0 AND T2."U_JobChallan3" = T2."U_JobChallan4")
+          )
+    ) THEN
+        error := 60011;
+        error_message := 'Validation Error: Duplicate Inventory Transfer numbers are not allowed on the same line.';
+    END IF;
+
+    -----------------------------------------------------------------------------------------------
+    -- 4. QUANTITY SUM CHECK: Row issue quantity must perfectly equal the sum of active Challan quantities
+    -----------------------------------------------------------------------------------------------
+    IF :error = 0 AND EXISTS (
+        SELECT 1
+        FROM OIGE T0
+        INNER JOIN NNM1 T1 ON T0."Series" = T1."Series"
+        INNER JOIN IGE1 T2 ON T0."DocEntry" = T2."DocEntry"
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+          AND IFNULL(T1."SeriesName", '') LIKE 'JT%'
+          AND T2."Quantity" <> (
+              IFNULL(T2."U_JCQty1", 0) +
+              IFNULL(T2."U_JCQty2", 0) +
+              IFNULL(T2."U_JCQty3", 0) +
+              IFNULL(T2."U_JWQty4", 0)
+          )
+    ) THEN
+        error := 60012;
+        error_message := 'Quantity Mismatch: Total row issue quantity must match the sum of all entered Jobwork Challan quantities.';
+    END IF;
+
+    -----------------------------------------------------------------------------------------------
+    -- 5. ITEM MAPPING LOCK: Explicit Item Code Verification against the referenced Inventory Transfer
+    -----------------------------------------------------------------------------------------------
+    IF :error = 0 AND EXISTS (
+        SELECT 1
+        FROM (
+            SELECT "ItemCode", "U_JobChallan1" AS "ChallanNum", "U_JWDate" AS "ChallanDate" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan1", 0) <> 0
+            UNION ALL
+            SELECT "ItemCode", "U_JobChallan2" AS "ChallanNum", "U_JWDate2" AS "ChallanDate" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan2", 0) <> 0
+            UNION ALL
+            SELECT "ItemCode", "U_JobChallan3" AS "ChallanNum", "U_JWDate3" AS "ChallanDate" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan3", 0) <> 0
+            UNION ALL
+            SELECT "ItemCode", "U_JobChallan4" AS "ChallanNum", "U_JWDate4" AS "ChallanDate" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan4", 0) <> 0
+        ) CA
+        INNER JOIN OIGE M0 ON M0."DocEntry" = :list_of_cols_val_tab_del
+        INNER JOIN NNM1 M1 ON M0."Series" = M1."Series"
+        WHERE IFNULL(M1."SeriesName", '') LIKE 'JT%'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM OWTR W0
+              INNER JOIN WTR1 W1 ON W0."DocEntry" = W1."DocEntry"
+              WHERE W0."DocNum" = CA."ChallanNum"
+                AND W0."DocDate" = CA."ChallanDate"
+                AND W1."ItemCode" = CA."ItemCode"
+          )
+    ) THEN
+        error := 60015;
+        error_message := 'Item Code Mismatch: The selected item does not exist in the referenced Inventory Transfer Challan.';
+    END IF;
+
+    -----------------------------------------------------------------------------------------------
+    -- 6. FISCAL YEAR SAFE CONSUMPTION CHECK: Validates balance using decoupled aggregation maps
+    -----------------------------------------------------------------------------------------------
+    IF :error = 0 THEN
+        SELECT
+            IFNULL(MAX(60013), 0),
+            IFNULL(MAX('Lock Block: Challan No ' || TO_VARCHAR(SRC."ChallanNum") || ' remaining balance is only ' || TO_VARCHAR(SRC."Bal") || '. You entered ' || TO_VARCHAR(SRC."EnteredQty")), '')
+        INTO error, error_message
+        FROM (
+            SELECT
+                CA."ChallanNum",
+                CA."EnteredQty",
+                (IFNULL(O."TotalQty", 0) - IFNULL(H."HistQty", 0)) AS "Bal"
+            FROM (
+                SELECT "ItemCode", "U_JobChallan1" AS "ChallanNum", "U_JWDate" AS "ChallanDate", "U_JCQty1" AS "EnteredQty" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan1", 0) <> 0
+                UNION ALL
+                SELECT "ItemCode", "U_JobChallan2" AS "ChallanNum", "U_JWDate2" AS "ChallanDate", "U_JCQty2" AS "EnteredQty" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan2", 0) <> 0
+                UNION ALL
+                SELECT "ItemCode", "U_JobChallan3" AS "ChallanNum", "U_JWDate3" AS "ChallanDate", "U_JCQty3" AS "EnteredQty" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan3", 0) <> 0
+                UNION ALL
+                SELECT "ItemCode", "U_JobChallan4" AS "ChallanNum", "U_JWDate4" AS "ChallanDate", "U_JWQty4" AS "EnteredQty" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan4", 0) <> 0
+            ) CA
+            INNER JOIN OIGE M0 ON M0."DocEntry" = :list_of_cols_val_tab_del
+            INNER JOIN NNM1 M1 ON M0."Series" = M1."Series"
+
+            -- Map 1: Pre-calculated original quantities from Inventory Transfers
+            LEFT JOIN (
+                SELECT W0."DocNum", W0."DocDate", W1."ItemCode", SUM(W1."Quantity") AS "TotalQty"
+                FROM OWTR W0
+                INNER JOIN WTR1 W1 ON W0."DocEntry" = W1."DocEntry"
+                GROUP BY W0."DocNum", W0."DocDate", W1."ItemCode"
+            ) O ON CA."ChallanNum" = O."DocNum" AND CA."ChallanDate" = O."DocDate" AND CA."ItemCode" = O."ItemCode"
+
+            -- Map 2: Pre-calculated historical consumption entries (Excluding current DocEntry)
+            LEFT JOIN (
+                SELECT HistC."ItemCode", HistC."ChallanNum", HistC."ChallanDate", SUM(HistC."Qty") AS "HistQty"
+                FROM (
+                    SELECT "DocEntry", "ItemCode", "U_JobChallan1" AS "ChallanNum", "U_JWDate" AS "ChallanDate", "U_JCQty1" AS "Qty" FROM IGE1 WHERE IFNULL("U_JobChallan1", 0) <> 0
+                    UNION ALL
+                    SELECT "DocEntry", "ItemCode", "U_JobChallan2" AS "ChallanNum", "U_JWDate2" AS "ChallanDate", "U_JCQty2" AS "Qty" FROM IGE1 WHERE IFNULL("U_JobChallan2", 0) <> 0
+                    UNION ALL
+                    SELECT "DocEntry", "ItemCode", "U_JobChallan3" AS "ChallanNum", "U_JWDate3" AS "ChallanDate", "U_JCQty3" AS "Qty" FROM IGE1 WHERE IFNULL("U_JobChallan3", 0) <> 0
+                    UNION ALL
+                    SELECT "DocEntry", "ItemCode", "U_JobChallan4" AS "ChallanNum", "U_JWDate4" AS "ChallanDate", "U_JWQty4" AS "Qty" FROM IGE1 WHERE IFNULL("U_JobChallan4", 0) <> 0
+                ) HistC
+                WHERE HistC."DocEntry" <> :list_of_cols_val_tab_del
+                GROUP BY HistC."ItemCode", HistC."ChallanNum", HistC."ChallanDate"
+            ) H ON CA."ItemCode" = H."ItemCode" AND CA."ChallanNum" = H."ChallanNum" AND CA."ChallanDate" = H."ChallanDate"
+
+            WHERE IFNULL(M1."SeriesName", '') LIKE 'JT%'
+        ) SRC
+        WHERE SRC."EnteredQty" > SRC."Bal";
+    END IF;
+
 END IF;
 -- Select the return values-
 select :error, :error_message FROM dummy;

@@ -140,6 +140,7 @@ IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
     DECLARE v_GN3             NVARCHAR(10);
     DECLARE v_GN4             NVARCHAR(10);
     DECLARE v_CardCode        NVARCHAR(10);
+    DECLARE GroupName NVARCHAR(100);
 
     -- ─────────────────────────────────────────────────────────────
     -- MAIN SELECT — fetch all required fields in one query
@@ -157,7 +158,8 @@ IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
         IFNULL(OCRD."U_PaymentTerm02",''),
         IFNULL(OCRD."U_PaymentTerm03",''),
         IFNULL(OCRD."U_PaymentTerm04",''),
-        IFNULL(OCRD."CardCode",'')
+        IFNULL(OCRD."CardCode",''),
+        IFNULL(OCRG."GroupName", '')
     INTO
         CardType,    Organisation, Industry,    ValidFor,
         SlpCode,     LeadSource,   Territory,   MSMEtype,
@@ -166,12 +168,14 @@ IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
         v_HouseBank, v_HousBnkAct,
         v_GroupNum,
         v_PT1, v_PT2, v_PT3, v_PT4,
-        v_CardCode
+        v_CardCode,
+        GroupName
     FROM OCRD
     INNER JOIN NNM1 ON NNM1."Series" = OCRD."Series"
     INNER JOIN OUSR ON OUSR."USERID" = (CASE WHEN :transaction_type = 'A'
                                               THEN OCRD."UserSign"
                                               ELSE OCRD."UserSign2" END)
+	LEFT JOIN OCRG ON OCRD."GroupCode" = OCRG."GroupCode"
     WHERE OCRD."CardCode" = :list_of_cols_val_tab_del;
 
     -- Standardize Payment Term group numbers for comparison
@@ -250,13 +254,63 @@ IF :object_type = '2' AND (:transaction_type = 'A' OR :transaction_type = 'U') T
     -- ─────────────────────────────────────────────────────────────
     -- ACCOUNTS PAYABLE ACCOUNT VALIDATION
     -- ─────────────────────────────────────────────────────────────
-    IF (GroupTypee = '105' AND DebAcct NOT IN ('21000320'))
-    OR (GroupTypee = '103' AND DebAcct NOT IN ('21000315'))
-    OR (GroupTypee = '106' AND DebAcct NOT IN ('21003211'))
-    OR (GroupTypee = '102' AND DebAcct NOT IN ('11200510'))
-    OR (GroupTypee = '104' AND DebAcct NOT IN ('11200520')) THEN
+    IF :GroupTypee = '105' AND :DebAcct <> '21000320' THEN
         error := -20000;
-        error_message := N'Please select proper Accounts Payable in Business Partner.';
+        error_message := N'Incorrect Account: You selected ' || IFNULL(:DebAcct, 'None') || N'. For Group Import, the Account must be 21000320.';
+
+    ELSEIF :GroupTypee = '103' AND :DebAcct <> '21000315' THEN
+        error := -20000;
+        error_message := N'Incorrect Account: You selected ' || IFNULL(:DebAcct, 'None') || N'. For Group Domestic Supplier, the Account must be 21000315.';
+
+    ELSEIF :GroupTypee = '106' AND :DebAcct <> '21003211' THEN
+        error := -20000;
+        error_message := N'Incorrect Account: You selected ' || IFNULL(:DebAcct, 'None') || N'. For Group Employee, the Account must be 21003211.';
+
+    ELSEIF :GroupTypee = '102' AND :DebAcct <> '11200510' THEN
+        error := -20000;
+        error_message := N'Incorrect Account: You selected ' || IFNULL(:DebAcct, 'None') || N'. For Group Domestic, the Account must be 11200510.';
+
+    ELSEIF :GroupTypee = '104' AND :DebAcct <> '11200520' THEN
+        error := -20000;
+        error_message := N'Incorrect Account: You selected ' || IFNULL(:DebAcct, 'None') || N'. For Group Export, the Account must be 11200520.';
+    END IF;
+
+    ----------------------------------------------------------------------
+    -- 2. VALIDATE GROUP BASED ON SERIES
+    ----------------------------------------------------------------------
+    -- Only run this if the previous check didn't already throw an error
+    IF :error = 0 THEN
+
+        IF (:Series LIKE 'COD%' OR :Series LIKE 'CPD%' OR :Series LIKE 'CID%') AND :GroupTypee <> '102' THEN
+            error := -20019;
+            error_message := N'Incorrect Group: You selected ' || IFNULL(:GroupName, 'None') || N'. For Series ' || IFNULL(:Series, 'Unknown') || N', the Group must be Domestic.';
+
+        ELSEIF (:Series LIKE 'VIRD%' OR :Series LIKE 'VPRD%' OR :Series LIKE 'VORD%' OR :Series LIKE 'VPPD%') AND :GroupTypee <> '103' THEN
+            error := -20019;
+            error_message := N'Incorrect Group: You selected ' || IFNULL(:GroupName, 'None') || N'. For Series ' || IFNULL(:Series, 'Unknown') || N', the Group must be Domestic Supplier.';
+
+        ELSEIF (:Series LIKE 'COE%' OR :Series LIKE 'CPE%' OR :Series LIKE 'CIE%') AND :GroupTypee <> '104' THEN
+            error := -20019;
+            error_message := N'Incorrect Group: You selected ' || IFNULL(:GroupName, 'None') || N'. For Series ' || IFNULL(:Series, 'Unknown') || N', the Group must be Export.';
+
+        ELSEIF (:Series LIKE 'VIRI%' OR :Series LIKE 'VPRI%' OR :Series LIKE 'VORI%') AND :GroupTypee <> '105' THEN
+            error := -20019;
+            error_message := N'Incorrect Group: You selected ' || IFNULL(:GroupName, 'None') || N'. For Series ' || IFNULL(:Series, 'Unknown') || N', the Group must be Import.';
+
+        ELSEIF (:Series LIKE 'VFAS%' OR :Series LIKE 'VLAB%' OR :Series LIKE 'VEXP%' OR :Series LIKE 'VGPR%') AND :GroupTypee <> '103' THEN
+            error := -20019;
+            error_message := N'Incorrect Group: You selected ' || IFNULL(:GroupName, 'None') || N'. For Series ' || IFNULL(:Series, 'Unknown') || N', the Group must be Domestic Supplier.';
+
+        ELSEIF (:Series LIKE 'EMP%' OR :Series LIKE 'STBD%') AND :GroupTypee <> '106' THEN
+            error := -20019;
+            error_message := N'Incorrect Group: You selected ' || IFNULL(:GroupName, 'None') || N'. For Series ' || IFNULL(:Series, 'Unknown') || N', the Group must be Employee.';
+
+        ELSEIF (:Series LIKE 'STLO%') AND :GroupTypee <> '107' THEN
+            error := -20019;
+            error_message := N'Incorrect Group: You selected ' || IFNULL(:GroupName, 'None') || N'. For Series ' || IFNULL(:Series, 'Unknown') || N', the Group must be Employee Loan.';
+
+        END IF;
+
     END IF;
 
     -- ─────────────────────────────────────────────────────────────
@@ -20058,7 +20112,7 @@ if Item like '%FG%' then
             error := -1046;
             error_message := 'The PCRM from PC-QC cannot be moved to any warehouse other than PC-QCR,PC-RAW';
         end if;
-		if FromWhs = '1BT' and ToWhs not in ('DI-RAW','PC-RAW', 'OF-RAW','PC-QC','DI-QC','DI-TRD') then
+		if FromWhs = '1BT' and ToWhs not in ('DI-RAW','PC-RAW', 'OF-RAW','PC-QC','DI-QC','DI-TRD','PC-QCR') then
             error := -1047;
             error_message := 'The PCRM from 1BT cannot be moved to any warehouse other than DI-RAW,PC-RAW';
         end if;
@@ -22797,7 +22851,7 @@ IF object_type = '20' AND (:transaction_type = 'U') THEN
         T1."U_UNE_QTY", T0."U_UNE_GEDT", T0."U_UNE_VehicleNo", T1."U_PTYPE", T0."BPLId", T0."U_WeighOut";
 
     -- 2. New Condition: Only validate if Packing Type is TANKER% and WeighOut is No
-    IF UPPER(:GRN_PType) LIKE 'TANKER%' AND :WeighOut = 'No' AND GRN_BPLId = 4 THEN
+    IF UPPER(:GRN_PType) LIKE 'TANKER%' AND :WeighOut = 'No' /*AND GRN_BPLId = 4*/ THEN
 
         -- Existing validation logic starts here
         IF :GRN_SlipNo_Num > 0 THEN
