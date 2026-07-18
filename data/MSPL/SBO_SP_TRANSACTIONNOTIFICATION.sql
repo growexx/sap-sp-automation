@@ -3616,7 +3616,7 @@ DECLARE JWChallan3 Int;
 		END WHILE;
 END IF;
 
-IF object_type = '60' AND (:transaction_type = 'A' ) THEN
+/*IF object_type = '60' AND (:transaction_type = 'A' ) THEN
 DECLARE MinGI Int;
 DECLARE MaxGI Int;
 DECLARE JWQty1 Nvarchar(50);
@@ -3659,7 +3659,7 @@ DECLARE JWChallan3 Int;
 			END IF;
 			MinGI := MinGI+1;
 		END WHILE;
-END IF;
+END IF;*/
 ----------------------Goods issue-------------------
 ----------------UNIT-I
 IF object_type = '60' AND (:transaction_type = 'A') THEN
@@ -9145,7 +9145,7 @@ If object_type = '13' and (:transaction_type = 'A') then
 		WHILE MINN<=MAXX DO
 			select T1."ItemCode" into Icode FROM INV1 T1 WHERE T1."DocEntry"= :list_of_cols_val_tab_del and T1."VisOrder" = MINN;
 
-			IF Icode <> 'SER0121' and Icode <> 'WSTG0001' then
+			IF Icode <> 'SER0121' and Icode <> 'WSTG0001' and Icode <> 'SER0038'then
 				select concat(concat(concat(concat("Chapter",'.'),"Heading"),'.'),"SubHeading") into ItmHSN from OCHP T0
 				INNER JOIN OITM T1 ON T0."AbsEntry" = T1."ChapterID"
 				INNER JOIN INV1 T2 ON T2."ItemCode" = T1."ItemCode"
@@ -9163,8 +9163,6 @@ If object_type = '13' and (:transaction_type = 'A') then
 			MINN = MINN + 1;
 		END WHILE;
 END IF;
-
-
 
 If object_type = '20' and (:transaction_type = 'A' OR :transaction_type = 'U') then
 
@@ -18892,7 +18890,7 @@ if DraftObj = 60 THEN
 END IF;
 END IF;
 
-IF object_type='112' AND (:transaction_type = 'U' OR :transaction_type = 'A') THEN
+/*IF object_type='112' AND (:transaction_type = 'U' OR :transaction_type = 'A') THEN
 
 DECLARE Pterm Nvarchar(150);
 DECLARE Rate Int;
@@ -18936,7 +18934,7 @@ if DraftObj = 13 THEN
 		END WHILE;
 	END IF;
 END IF;
-END IF;
+END IF;*/
 
 
 IF Object_type = '112' and (:transaction_type ='A') Then
@@ -21562,7 +21560,7 @@ DECLARE BaseTypee int;
 						error := -1197;
 						error_message := N'Please select proper Warehouse.';
 				END IF;
-				IF (ReceiptWhsCode in ('JW-QC', 'OF-PORT', 'SC-QC') and ReceiptItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013')) then
+				IF (ReceiptWhsCode in ('JW-QC', 'OF-PORT', 'SC-QC') and ReceiptItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','OFFG0047')) then
 						error := -1198;
 						error_message := N'Please select proper Item.';
 				END IF;
@@ -21624,7 +21622,7 @@ DECLARE ProdOrderType nvarchar(50);
 				error := -1203;
 				error_message := N'Please select proper Warehouse.';
 		END IF;
-		IF (ProdOrderWhsCode in ('JW-QC', 'OF-PORT', 'SC-QC') and ProdOrderItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','SCFG0020')) then
+		IF (ProdOrderWhsCode in ('JW-QC', 'OF-PORT', 'SC-QC') and ProdOrderItemCode not in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013','SCFG0020','OFFG0047')) then
 				error := -1204;
 				error_message := N'Please select proper Item.';
 		END IF;
@@ -25272,71 +25270,84 @@ END IF;
 -----------------------------------------------------------------------------------------------------------------
 -- JOBWORK TRANSACTION VALIDATION FOR GOODS RECEIPT (OIGN / IGN1)
 -----------------------------------------------------------------------------------------------------------------
+
 IF :object_type = '59' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
-    DECLARE SeriesName NVARCHAR(100) := IFNULL((
+
+    DECLARE SeriesName NVARCHAR(100) := '';
+    DECLARE JobworkFirmCode INT := -1;
+
+    -- Safe SeriesName Assignment
+    SeriesName := IFNULL((
         SELECT TOP 1 T1."SeriesName"
         FROM OIGN T0
         INNER JOIN NNM1 T1 ON T0."Series" = T1."Series"
-        WHERE T0."DocEntry" = :list_of_cols_val_tab_del), '');
-    DECLARE JobworkFirmCode INT := IFNULL((SELECT TOP 1 "FirmCode" FROM OMRC WHERE "FirmName" = 'Jobwork'), -1);
+        WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+    ), '');
+
+    -- Cache the Jobwork FirmCode to optimize performance
+    JobworkFirmCode := IFNULL((SELECT TOP 1 "FirmCode" FROM OMRC WHERE "FirmName" = 'Jobwork'), -1);
+
     -----------------------------------------------------------------------------------------------
-    -- CONDITION A: IF SERIES IS JOBWORK (JT%)
+    -- VALIDATION 1: Enforce OIGN Header UDFs ONLY IF it's a Jobwork Series & Warehouse is JW-CRM
     -----------------------------------------------------------------------------------------------
     IF :SeriesName LIKE 'JT%' THEN
-
-        -- 1. Item & Warehouse Gatekeeper: Every row must be a Jobwork Item AND use JW-CRM warehouse
         IF EXISTS (
-            SELECT 1
-            FROM IGN1 T0
-            INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
-            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
-              AND (
-                  T1."FirmCode" <> :JobworkFirmCode
-                  OR T0."WhsCode" <> 'JW-CRM'
-              )
-        ) THEN
-            error := 30001;
-            error_message := 'Series JT% is strictly restricted to Jobwork items and Warehouse JW-CRM only.';
-        END IF;
-
-        -- 2. Enforce Exact Header UDFs (Only runs if the item/warehouse check passes)
-        IF :error = 0 AND EXISTS (
             SELECT 1
             FROM OIGN T0
             INNER JOIN IGN1 T1 ON T0."DocEntry" = T1."DocEntry"
             INNER JOIN OITM T2 ON T1."ItemCode" = T2."ItemCode"
             WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T1."BaseType" <> 202 -- Strictly bypasses Receipts from Production
               AND T2."FirmCode" = :JobworkFirmCode
               AND T1."WhsCode" = 'JW-CRM'
               AND (
-                  IFNULL(T0."U_UNE_JVNM", '') = ''          -- Jobwork Vendor Name
-                  OR IFNULL(T0."U_UNE_JVAD", '') = ''        -- Jobwork Vendor Address
-                  OR IFNULL(T0."U_UNE_TransportName", '') = '' -- Transporter Name
-                  OR IFNULL(T0."U_UNE_VehicleNo", '') = ''    -- Vehicle Number
-                  OR IFNULL(T0."U_UNE_LRNo", '') = ''        -- LR Number
+                  IFNULL(T0."U_UNE_JVNM", '') = ''
+                  OR IFNULL(T0."U_UNE_JVAD", '') = ''
+                  OR IFNULL(T0."U_UNE_TransportName", '') = ''
+                  OR IFNULL(T0."U_UNE_VehicleNo", '') = ''
+                  OR IFNULL(T0."U_UNE_LRNo", '') = ''
               )
         ) THEN
-            error := 30002;
-            error_message := 'Missing required fields: Please fill all Transport, Vendor, Vehicle, and LR details.';
+            error := 30001;
+            error_message := 'Missing required fields: Please fill Header Transport, Vehicle, and LR details for Unit-I Job Work.';
         END IF;
+    END IF;
 
     -----------------------------------------------------------------------------------------------
-    -- CONDITION B: IF SERIES IS NOT JOBWORK (Regular Company Entries)
+    -- VALIDATION 2: If Series is 'JT%', block any non-Jobwork items or wrong warehouses completely
     -----------------------------------------------------------------------------------------------
-    ELSE
-        -- Strictly block Jobwork items OR the JW-CRM warehouse from being used on normal series
+    IF :error = 0 AND :SeriesName LIKE 'JT%' THEN
         IF EXISTS (
             SELECT 1
             FROM IGN1 T0
             INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
             WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T0."BaseType" <> 202 -- Strictly bypasses Receipts from Production
+              AND (T1."FirmCode" <> :JobworkFirmCode OR T0."WhsCode" <> 'JW-CRM')
+        ) THEN
+            error := 30002;
+            error_message := 'Series JT% is restricted to Jobwork items and Warehouse JW-CRM only.';
+        END IF;
+    END IF;
+
+    -----------------------------------------------------------------------------------------------
+    -- VALIDATION 3: Universal Check - Stop anyone from using 'JW-CRM' on regular entries
+    -----------------------------------------------------------------------------------------------
+    IF :error = 0 THEN
+        IF EXISTS (
+            SELECT 1
+            FROM IGN1 T0
+            INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T0."BaseType" <> 202 -- Strictly bypasses Receipts from Production
+              AND T0."WhsCode" = 'JW-CRM'
               AND (
-                  T1."FirmCode" = :JobworkFirmCode
-                  OR T0."WhsCode" = 'JW-CRM'
+                  T1."FirmCode" <> :JobworkFirmCode
+                  OR :SeriesName NOT LIKE 'JT%'
               )
         ) THEN
             error := 30003;
-            error_message := 'Transaction blocked: Regular series cannot contain Jobwork items or use Warehouse JW-CRM.';
+            error_message := 'Warehouse JW-CRM can only be accessed via JT% series and Jobwork items.';
         END IF;
     END IF;
 END IF;
@@ -25344,6 +25355,9 @@ END IF;
 -- JOBWORK TRANSACTION VALIDATION FOR INVENTORY TRANSFER (OWTR / WTR1 / WTR21)
 -----------------------------------------------------------------------------------------------------------------
 IF :object_type = '67' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+
+    DECLARE JobworkFirmCode INT := -1;
+    JobworkFirmCode := IFNULL((SELECT TOP 1 "FirmCode" FROM OMRC WHERE "FirmName" = 'Jobwork'), -1);
 
     -----------------------------------------------------------------------------------------------
     -- CONDITION A: IF THE TRANSFER IS USING THE JOBWORK SERIES (JT%)
@@ -25362,28 +25376,37 @@ IF :object_type = '67' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             FROM WTR1 T0
             INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
             WHERE T0."DocEntry" = :list_of_cols_val_tab_del
-              AND T1."FirmCode" <> (SELECT TOP 1 "FirmCode" FROM OMRC WHERE "FirmName" = 'Jobwork')
+              AND T1."FirmCode" <> :JobworkFirmCode
         ) THEN
             error := 67001;
             error_message := 'Series JT is strictly restricted to Jobwork items only.';
         END IF;
 
-        -- 2. Warehouse Gatekeeper: From Warehouse must be 'JW-CRM' and To Warehouse must be 'JW-VRM'
+        -- 2. Warehouse Gatekeeper: Allows standard issues OR post-QC finished goods moves
         IF :error = 0 AND EXISTS (
             SELECT 1
             FROM WTR1 T0
             WHERE T0."DocEntry" = :list_of_cols_val_tab_del
-              AND (T0."FromWhsCod" <> 'JW-CRM' OR T0."WhsCode" <> 'JW-VRM')
+              AND NOT (
+                  -- Route 1: Standard Issue
+                  (T0."FromWhsCod" = 'JW-CRM' AND T0."WhsCode" = 'JW-VRM')
+                  OR
+                  -- Route 2: Post-QC Release
+                  (T0."FromWhsCod" = 'JW-QC' AND T0."WhsCode" = 'JW-CFG')
+              )
         ) THEN
             error := 67002;
-            error_message := 'Jobwork transfers must move from Warehouse JW-CRM to Warehouse JW-VRM.';
+            error_message := 'Jobwork transfers must move from JW-CRM to JW-VRM, or JW-QC to JW-CFG.';
         END IF;
 
-        -- 3. Enforce Exact Header UDFs (Transport Name, Vehicle No, LR No)
+        -- 3. Enforce Exact Header UDFs (EXCEPT for Post-QC Warehouse Transfers)
         IF :error = 0 AND EXISTS (
             SELECT 1
             FROM OWTR T0
+            INNER JOIN WTR1 T1 ON T0."DocEntry" = T1."DocEntry"
             WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              -- Bypass if it is moving finished goods from QC to CFG
+              AND NOT (T1."FromWhsCod" = 'JW-QC' AND T1."WhsCode" = 'JW-CFG')
               AND (
                   IFNULL(T0."U_UNE_TransportName", '') = ''
                   OR IFNULL(T0."U_UNE_VehicleNo", '') = ''
@@ -25394,8 +25417,13 @@ IF :object_type = '67' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             error_message := 'Missing required fields: Please fill Transport Name, Vehicle No, and LR No.';
         END IF;
 
-        -- 4. Mandatory Reference Link: Must map to a Goods Receipt (Object Type 59)
+        -- 4. Mandatory Reference Link: (Bypassed for JW-QC to JW-CFG)
         IF :error = 0 AND NOT EXISTS (
+            SELECT 1
+            FROM WTR1 T0
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T0."FromWhsCod" = 'JW-QC' AND T0."WhsCode" = 'JW-CFG'
+        ) AND NOT EXISTS (
             SELECT 1
             FROM WTR21
             WHERE "DocEntry" = :list_of_cols_val_tab_del
@@ -25405,8 +25433,13 @@ IF :object_type = '67' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             error_message := 'Reference document link is mandatory for JT Series and must be a Goods Receipt entry.';
         END IF;
 
-        -- 5. Duplicate Prevention: Ensure this specific Goods Receipt has not been linked elsewhere before
-        IF :error = 0 AND EXISTS (
+        -- 5. Duplicate Prevention: (Bypassed for JW-QC to JW-CFG)
+        IF :error = 0 AND NOT EXISTS (
+            SELECT 1
+            FROM WTR1 T0
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T0."FromWhsCod" = 'JW-QC' AND T0."WhsCode" = 'JW-CFG'
+        ) AND EXISTS (
             SELECT 1
             FROM WTR21 R1
             INNER JOIN WTR21 R2 ON R1."RefDocEntr" = R2."RefDocEntr" AND R1."RefObjType" = R2."RefObjType"
@@ -25418,18 +25451,21 @@ IF :object_type = '67' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             error_message := 'This Goods Receipt has already been linked to another Inventory Transfer transaction.';
         END IF;
 
-        -- 6. Item & Quantity Cross-Verification: Match IT totals exactly against the linked Goods Receipt
-        IF :error = 0 AND EXISTS (
+        -- 6. Item & Quantity Cross-Verification: (Bypassed for JW-QC to JW-CFG)
+        IF :error = 0 AND NOT EXISTS (
+            SELECT 1
+            FROM WTR1 T0
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T0."FromWhsCod" = 'JW-QC' AND T0."WhsCode" = 'JW-CFG'
+        ) AND EXISTS (
             SELECT 1
             FROM (
-                -- Total quantities currently on the Inventory Transfer
                 SELECT "ItemCode", SUM("Quantity") AS "ITQty"
                 FROM WTR1
                 WHERE "DocEntry" = :list_of_cols_val_tab_del
                 GROUP BY "ItemCode"
             ) T_IT
             FULL OUTER JOIN (
-                -- Total quantities established on the linked Goods Receipt
                 SELECT G1."ItemCode", SUM(G1."Quantity") AS "GRQty"
                 FROM IGN1 G1
                 INNER JOIN WTR21 R1 ON G1."DocEntry" = R1."RefDocEntr"
@@ -25448,7 +25484,7 @@ IF :object_type = '67' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
     -----------------------------------------------------------------------------------------------
     -- CONDITION B: IF THE TRANSFER IS NOT USING A JOBWORK SERIES (Regular Company Entry)
     -----------------------------------------------------------------------------------------------
-    IF NOT EXISTS (
+    IF :error = 0 AND NOT EXISTS (
         SELECT 1
         FROM OWTR T0
         INNER JOIN NNM1 T1 ON T0."Series" = T1."Series"
@@ -25456,21 +25492,21 @@ IF :object_type = '67' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
           AND T1."SeriesName" LIKE 'JT%'
     ) THEN
 
-        -- Vice Versa Lock: Keep regular transfers clean from Jobwork items or specialized warehouses
         IF EXISTS (
             SELECT 1
             FROM WTR1 T0
             INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
             WHERE T0."DocEntry" = :list_of_cols_val_tab_del
               AND (
-                  T1."FirmCode" = (SELECT TOP 1 "FirmCode" FROM OMRC WHERE "FirmName" = 'Jobwork')
+                  (T1."FirmCode" = :JobworkFirmCode AND NOT (T0."FromWhsCod" = 'JW-QC' AND T0."WhsCode" = 'JW-CFG'))
                   OR T0."FromWhsCod" IN ('JW-CRM', 'JW-VRM')
                   OR T0."WhsCode" IN ('JW-CRM', 'JW-VRM')
               )
         ) THEN
             error := 67004;
-            error_message := 'Regular series documents cannot contain Jobwork items or use Jobwork Warehouses (JW-CRM/JW-VRM).';
+            error_message := 'Regular series documents cannot contain Jobwork items (except JW-QC to JW-CFG) or use standard Jobwork Warehouses (JW-CRM/JW-VRM).';
         END IF;
+
     END IF;
 END IF;
 -----------------------------------------------------------------------------------------------------------------
@@ -25551,11 +25587,10 @@ END IF;
 -----------------------------------------------------------------------------------------------------------------
 -- JOBWORK TRANSACTION VALIDATION FOR ISSUE FOR PRODUCTION (OIGE / IGE1)
 -----------------------------------------------------------------------------------------------------------------
-
 IF :object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
 
     -----------------------------------------------------------------------------------------------
-    -- 1. GATEKEEPER: JT Series must only use JW-VRM warehouse and Jobwork item categories
+    -- 1. GATEKEEPER: JT Series must only use allowed jobwork warehouses and Jobwork item categories
     -----------------------------------------------------------------------------------------------
     IF EXISTS (
         SELECT 1
@@ -25566,22 +25601,25 @@ IF :object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
         INNER JOIN OMRC T4 ON T3."FirmCode" = T4."FirmCode"
         WHERE T0."DocEntry" = :list_of_cols_val_tab_del
           AND IFNULL(T1."SeriesName", '') LIKE 'JT%'
-          AND (T2."WhsCode" <> 'JW-VRM' OR T4."FirmName" <> 'Jobwork')
+          -- UPDATED: Restricts warehouses to ONLY JW-VRM or JW-CFG
+          AND (T2."WhsCode" NOT IN ('JW-VRM', 'JW-CFG') OR T4."FirmName" <> 'Jobwork')
     ) THEN
         error := 60010;
-        error_message := 'JT series documents are restricted to Jobwork items and Warehouse JW-VRM only.';
+        error_message := 'JT series documents are restricted to Jobwork items and Warehouse JW-VRM or JW-CFG only.';
     END IF;
 
     -----------------------------------------------------------------------------------------------
-    -- 2. MANDATORY CHECK: Challan 1 details are mandatory. Remaining slots must be fully filled if used.
+    -- 2. MANDATORY CHECK: Challan 1 details are mandatory (BYPASSED for Warehouse JW-CFG)
     -----------------------------------------------------------------------------------------------
-    IF :error = 0 AND EXISTS (
+    /*IF :error = 0 AND EXISTS (
         SELECT 1
         FROM OIGE T0
         INNER JOIN NNM1 T1 ON T0."Series" = T1."Series"
         INNER JOIN IGE1 T2 ON T0."DocEntry" = T2."DocEntry"
         WHERE T0."DocEntry" = :list_of_cols_val_tab_del
           AND IFNULL(T1."SeriesName", '') LIKE 'JT%'
+          -- Bypass validation check if row is issuing from post-QC configuration warehouse
+          AND T2."WhsCode" <> 'JW-VRM' OR T2."WhsCode" <> 'JW-VRM'
           AND (
               -- Slot 1: Strictly mandatory for JT series documents
               IFNULL(T2."U_JobChallan1", 0) = 0
@@ -25600,10 +25638,10 @@ IF :object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
     ) THEN
         error := 60014;
         error_message := 'Mandatory Fields Missing: Jobwork Challan Number, Date, and Quantity must be filled out completely.';
-    END IF;
+    END IF;*/
 
     -----------------------------------------------------------------------------------------------
-    -- 3. DUPLICATE CHECK: Prevent entering the same Inventory Transfer DocNum on the same line
+    -- 3. DUPLICATE CHECK: Prevent entering the same Transfer DocNum on the same line (BYPASSED for Warehouse JW-CFG)
     -----------------------------------------------------------------------------------------------
     IF :error = 0 AND EXISTS (
         SELECT 1
@@ -25612,6 +25650,7 @@ IF :object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
         INNER JOIN IGE1 T2 ON T0."DocEntry" = T2."DocEntry"
         WHERE T0."DocEntry" = :list_of_cols_val_tab_del
           AND IFNULL(T1."SeriesName", '') LIKE 'JT%'
+          AND T2."WhsCode" <> 'JW-CFG'
           AND (
               (IFNULL(T2."U_JobChallan1", 0) <> 0 AND T2."U_JobChallan1" IN (T2."U_JobChallan2", T2."U_JobChallan3", T2."U_JobChallan4"))
               OR (IFNULL(T2."U_JobChallan2", 0) <> 0 AND T2."U_JobChallan2" IN (T2."U_JobChallan3", T2."U_JobChallan4"))
@@ -25623,7 +25662,7 @@ IF :object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
     END IF;
 
     -----------------------------------------------------------------------------------------------
-    -- 4. QUANTITY SUM CHECK: Row issue quantity must perfectly equal the sum of active Challan quantities
+    -- 4. QUANTITY SUM CHECK: Row quantity must match active Challan sum (BYPASSED for Warehouse JW-CFG)
     -----------------------------------------------------------------------------------------------
     IF :error = 0 AND EXISTS (
         SELECT 1
@@ -25632,6 +25671,7 @@ IF :object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
         INNER JOIN IGE1 T2 ON T0."DocEntry" = T2."DocEntry"
         WHERE T0."DocEntry" = :list_of_cols_val_tab_del
           AND IFNULL(T1."SeriesName", '') LIKE 'JT%'
+          AND T2."WhsCode" <> 'JW-CFG'
           AND T2."Quantity" <> (
               IFNULL(T2."U_JCQty1", 0) +
               IFNULL(T2."U_JCQty2", 0) +
@@ -25644,37 +25684,43 @@ IF :object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
     END IF;
 
     -----------------------------------------------------------------------------------------------
-    -- 5. ITEM MAPPING LOCK: Explicit Item Code Verification against the referenced Inventory Transfer
+    -- 5. ENHANCED PRECAUTION LOCK: Validates referenced Transfer details (BYPASSED for Warehouse JW-CFG)
     -----------------------------------------------------------------------------------------------
     IF :error = 0 AND EXISTS (
         SELECT 1
         FROM (
-            SELECT "ItemCode", "U_JobChallan1" AS "ChallanNum", "U_JWDate" AS "ChallanDate" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan1", 0) <> 0
+            SELECT "ItemCode", "WhsCode", "U_JobChallan1" AS "ChallanNum", "U_JWDate" AS "ChallanDate" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan1", 0) <> 0
             UNION ALL
-            SELECT "ItemCode", "U_JobChallan2" AS "ChallanNum", "U_JWDate2" AS "ChallanDate" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan2", 0) <> 0
+            SELECT "ItemCode", "WhsCode", "U_JobChallan2" AS "ChallanNum", "U_JWDate2" AS "ChallanDate" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan2", 0) <> 0
             UNION ALL
-            SELECT "ItemCode", "U_JobChallan3" AS "ChallanNum", "U_JWDate3" AS "ChallanDate" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan3", 0) <> 0
+            SELECT "ItemCode", "WhsCode", "U_JobChallan3" AS "ChallanNum", "U_JWDate3" AS "ChallanDate" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan3", 0) <> 0
             UNION ALL
-            SELECT "ItemCode", "U_JobChallan4" AS "ChallanNum", "U_JWDate4" AS "ChallanDate" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan4", 0) <> 0
+            SELECT "ItemCode", "WhsCode", "U_JobChallan4" AS "ChallanNum", "U_JWDate4" AS "ChallanDate" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan4", 0) <> 0
         ) CA
         INNER JOIN OIGE M0 ON M0."DocEntry" = :list_of_cols_val_tab_del
         INNER JOIN NNM1 M1 ON M0."Series" = M1."Series"
         WHERE IFNULL(M1."SeriesName", '') LIKE 'JT%'
+          AND CA."WhsCode" <> 'JW-CFG'
           AND NOT EXISTS (
               SELECT 1
               FROM OWTR W0
               INNER JOIN WTR1 W1 ON W0."DocEntry" = W1."DocEntry"
+              INNER JOIN NNM1 W2 ON W0."Series" = W2."Series"
+              INNER JOIN OITM W3 ON W1."ItemCode" = W3."ItemCode"
+              INNER JOIN OMRC W4 ON W3."FirmCode" = W4."FirmCode"
               WHERE W0."DocNum" = CA."ChallanNum"
                 AND W0."DocDate" = CA."ChallanDate"
                 AND W1."ItemCode" = CA."ItemCode"
+                AND IFNULL(W2."SeriesName", '') LIKE 'JT%'
+                AND W4."FirmName" = 'Jobwork'
           )
     ) THEN
         error := 60015;
-        error_message := 'Item Code Mismatch: The selected item does not exist in the referenced Inventory Transfer Challan.';
+        error_message := 'Invalid Reference Link: The target Inventory Transfer must belong to a JT series, contain a Jobwork item, and match the row Item Code.';
     END IF;
 
     -----------------------------------------------------------------------------------------------
-    -- 6. FISCAL YEAR SAFE CONSUMPTION CHECK: Validates balance using decoupled aggregation maps
+    -- 6. FISCAL YEAR SAFE CONSUMPTION CHECK: Validates balance calculation maps (BYPASSED for Warehouse JW-CFG)
     -----------------------------------------------------------------------------------------------
     IF :error = 0 THEN
         SELECT
@@ -25687,13 +25733,13 @@ IF :object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
                 CA."EnteredQty",
                 (IFNULL(O."TotalQty", 0) - IFNULL(H."HistQty", 0)) AS "Bal"
             FROM (
-                SELECT "ItemCode", "U_JobChallan1" AS "ChallanNum", "U_JWDate" AS "ChallanDate", "U_JCQty1" AS "EnteredQty" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan1", 0) <> 0
+                SELECT "ItemCode", "WhsCode", "U_JobChallan1" AS "ChallanNum", "U_JWDate" AS "ChallanDate", "U_JCQty1" AS "EnteredQty" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan1", 0) <> 0
                 UNION ALL
-                SELECT "ItemCode", "U_JobChallan2" AS "ChallanNum", "U_JWDate2" AS "ChallanDate", "U_JCQty2" AS "EnteredQty" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan2", 0) <> 0
+                SELECT "ItemCode", "WhsCode", "U_JobChallan2" AS "ChallanNum", "U_JWDate2" AS "ChallanDate", "U_JCQty2" AS "EnteredQty" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan2", 0) <> 0
                 UNION ALL
-                SELECT "ItemCode", "U_JobChallan3" AS "ChallanNum", "U_JWDate3" AS "ChallanDate", "U_JCQty3" AS "EnteredQty" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan3", 0) <> 0
+                SELECT "ItemCode", "WhsCode", "U_JobChallan3" AS "ChallanNum", "U_JWDate3" AS "ChallanDate", "U_JCQty3" AS "EnteredQty" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan3", 0) <> 0
                 UNION ALL
-                SELECT "ItemCode", "U_JobChallan4" AS "ChallanNum", "U_JWDate4" AS "ChallanDate", "U_JWQty4" AS "EnteredQty" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan4", 0) <> 0
+                SELECT "ItemCode", "WhsCode", "U_JobChallan4" AS "ChallanNum", "U_JWDate4" AS "ChallanDate", "U_JWQty4" AS "EnteredQty" FROM IGE1 WHERE "DocEntry" = :list_of_cols_val_tab_del AND IFNULL("U_JobChallan4", 0) <> 0
             ) CA
             INNER JOIN OIGE M0 ON M0."DocEntry" = :list_of_cols_val_tab_del
             INNER JOIN NNM1 M1 ON M0."Series" = M1."Series"
@@ -25723,10 +25769,10 @@ IF :object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
             ) H ON CA."ItemCode" = H."ItemCode" AND CA."ChallanNum" = H."ChallanNum" AND CA."ChallanDate" = H."ChallanDate"
 
             WHERE IFNULL(M1."SeriesName", '') LIKE 'JT%'
+              AND CA."WhsCode" <> 'JW-CFG' -- Bypasses logic map evaluation for final configuration rows
         ) SRC
         WHERE SRC."EnteredQty" > SRC."Bal";
     END IF;
-
 END IF;
 -- Select the return values-
 select :error, :error_message FROM dummy;

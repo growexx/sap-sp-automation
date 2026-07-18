@@ -20902,7 +20902,7 @@ DECLARE ProdOrderType nvarchar(50);
 				error := -1203;
 				error_message := N'Please select proper Warehouse.';
 		END IF;
-		IF (ProdOrderWhsCode in ('OF-QC', '2OF-QC') and ProdOrderItemCode not like 'OF%') then
+		IF (ProdOrderWhsCode in ('OF-QC', '2OF-QC','JW-QC') and ProdOrderItemCode not like 'OF%') then
 				error := -1204;
 				error_message := N'Please select proper Item.';
 		END IF;
@@ -22851,7 +22851,7 @@ IF object_type = '20' AND (:transaction_type = 'U') THEN
         T1."U_UNE_QTY", T0."U_UNE_GEDT", T0."U_UNE_VehicleNo", T1."U_PTYPE", T0."BPLId", T0."U_WeighOut";
 
     -- 2. New Condition: Only validate if Packing Type is TANKER% and WeighOut is No
-    IF UPPER(:GRN_PType) LIKE 'TANKER%' AND :WeighOut = 'No' /*AND GRN_BPLId = 4*/ THEN
+    IF UPPER(:GRN_PType) LIKE 'TANKER%' AND :WeighOut = 'No' AND GRN_BPLId = 4 THEN
 
         -- Existing validation logic starts here
         IF :GRN_SlipNo_Num > 0 THEN
