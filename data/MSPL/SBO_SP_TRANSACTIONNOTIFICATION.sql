@@ -9034,8 +9034,7 @@ Declare Base int;
 
 END IF;
 
-IF Object_type = '13' and (:transaction_type ='A' OR :transaction_type ='U') Then
-
+/*IF Object_type = '13' and (:transaction_type ='A' OR :transaction_type ='U') Then
 Declare Pterm nvarchar(250);
 Declare Pdcdate nvarchar(250);
 Declare Pdcchqno nvarchar(250);
@@ -9069,8 +9068,7 @@ Declare dominvoice int;
 			error_message := N'Please enter Advance Date';
 		End If;
 	End If;
-
-END IF;
+END IF;*/
 
 IF Object_type = 'SHIPMASTER' and (:transaction_type ='U') Then
 
@@ -18316,16 +18314,14 @@ THEN
 END IF;
 END IF;
 
-IF Object_type = '112' and (:transaction_type ='A' OR :transaction_type ='U') Then
-
+/*IF Object_type = '112' and (:transaction_type ='A' OR :transaction_type ='U') Then
 Declare Pterm nvarchar(250);
 Declare Pdcdate nvarchar(250);
 Declare Pdcchqno nvarchar(250);
 Declare advanceno nvarchar(250);
 Declare dominvoice int;
 (SELECT ODRF."ObjType" into DraftObj FROM ODRF WHERE ODRF."DocEntry"=:list_of_cols_val_tab_del );
-if DraftObj = 13
-THEN
+if DraftObj = 13 THEN
 	select T0."U_PDCDate" into Pdcdate from ODRF T0 where T0."DocEntry"=list_of_cols_val_tab_del and T0."ObjType"=13;
 	select T0."U_PDCChequeNo" into Pdcchqno from ODRF T0 where T0."DocEntry"=list_of_cols_val_tab_del and T0."ObjType"=13;
 	select T0."U_AdvanceNo" into advanceno from ODRF T0 where T0."DocEntry"=list_of_cols_val_tab_del and T0."ObjType"=13;
@@ -18353,10 +18349,8 @@ THEN
 			error_message := N'Please enter Advance Date';
 		End If;
 	End If;
-
-END IF;
-END IF;
-
+	END IF;
+END IF;*/
 
 IF Object_type = '112' and (:transaction_type ='A' OR :transaction_type ='U') Then
 Declare InvDet Int;
@@ -21750,7 +21744,7 @@ IF Object_type = 'Q_QCCH' and (:transaction_type ='A' or :transaction_type ='U')
 
     ExpectedLotNo := 'M' || FormattedDate || '/' || WhsID || '/' || FormattedDocEntry;
 
-    if LotNo <> ExpectedLotNo and ItemCodee in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013') then
+    if LotNo <> ExpectedLotNo and ItemCodee in ('OFFG0009', 'OFFG0010', 'OFFG0011', 'OFFG0012', 'OFFG0013', 'OFFG0047') then
     	error := -1210;
     	error_message := N'Incorrect Lot Number Format.   ' || 'Expected: ' || ExpectedLotNo;
     END IF;

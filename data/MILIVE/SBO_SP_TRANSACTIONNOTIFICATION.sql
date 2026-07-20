@@ -2951,6 +2951,24 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
 			END IF;
 		END IF;
 
+		IF ItemCode NOT LIKE '%PM%' AND PackingType NOT IN (
+	        SELECT T2."ItemName"
+	        FROM "@PO_ITEM_PACKING" T1
+	        INNER JOIN OITM T2 ON T2."ItemCode" = T1."U_PackCode"
+	        WHERE T1."Name" = ItemCode
+
+	        UNION ALL
+
+	        SELECT 'Tanker Load' FROM DUMMY
+
+	        UNION ALL
+
+	        SELECT 'Bags' FROM DUMMY
+	    ) THEN
+	        error := -41023;
+	        error_message := N'Select Packing Type from Search button at line - ' || MIN_ROW + 1;
+	    END IF;
+
 		MIN_ROW := MIN_ROW + 1;
 	END WHILE;
 END IF;
@@ -3203,6 +3221,25 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 				error := -41022;
 			    error_message := N'Select Packing Capacity at line - '||MIN_ROW+1;
 			END IF;
+
+			IF ItemCode NOT LIKE '%PM%' AND PackingType NOT IN (
+		        SELECT T2."ItemName"
+		        FROM "@PO_ITEM_PACKING" T1
+		        INNER JOIN OITM T2 ON T2."ItemCode" = T1."U_PackCode"
+		        WHERE T1."Name" = ItemCode
+
+		        UNION ALL
+
+		        SELECT 'Tanker Load' FROM DUMMY
+
+		        UNION ALL
+
+		        SELECT 'Bags' FROM DUMMY
+		    ) THEN
+		        error := -41023;
+		        error_message := N'Select Packing Type from Search button at line - ' || MIN_ROW + 1;
+		    END IF;
+
 		END IF;
 
 			MIN_ROW := MIN_ROW + 1;
