@@ -10662,7 +10662,7 @@ DECLARE MaxPR int;
 
 END IF;
 
-/*IF object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U')   THEN
+IF object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U')   THEN
 Declare ICode Nvarchar(150);
 Declare Iname Nvarchar(150);
 Declare Srs Nvarchar(150);
@@ -10690,7 +10690,7 @@ DECLARE MaxGI int;
 				        error_message := N'Not allowed to issue RM directly. Contact SAP team';
 			     	End If;
 
-			     	IF ICode LIKE '%FG%' THEN
+			     	IF ICode LIKE '%FG%' AND ICode <> 'OFFG0047' THEN
 				    	error :=287;
 				        error_message := N'Not allowed to issue FG directly. Contact SAP team';
 			     	End If;
@@ -10704,7 +10704,7 @@ DECLARE MaxGI int;
 	     	END IF;
 	     MinGI=MinGI+1;
 		END WHILE;
-END IF;*/
+END IF;
 
 IF object_type = '59' AND (:transaction_type = 'A' OR :transaction_type = 'U')   THEN
 Declare ICode Nvarchar(150);
@@ -19177,11 +19177,11 @@ THEN
 				    	error :=287;
 				        error_message := N'Not allowed to issue Jumbo bag.';
 			     	End If;
-			     	IF ICode LIKE '%RM%'AND ICode <> 'SCRM0016' AND ICode <> 'PCRM0017' AND ICode <> 'SCRM0025' THEN
+			     	IF ICode LIKE '%RM%' AND ICode <> 'SCRM0016' AND ICode <> 'PCRM0017' AND ICode <> 'SCRM0025' THEN
 				    	error :=287;
 				        error_message := N'Not allowed to issue RM directly. Contact SAP team';
 			     	End If;
-			     	IF ICode LIKE '%FG%' THEN
+			     	IF ICode LIKE '%FG%' AND ICode <> 'OFFG0047' THEN
 				    	error :=287;
 				        error_message := N'Not allowed to issue FG directly. Contact SAP team';
 			     	End If;
@@ -21509,7 +21509,7 @@ IF (Object_Type = 'GPass') AND (:transaction_type = 'A') THEN
 END IF;
 
 ----------------------------------  OF Validations Om - 07/03/2025 ------------------------------------
-/*IF Object_type = '20' and (:transaction_type ='A' or :transaction_type ='U') Then
+IF Object_type = '20' and (:transaction_type ='A' or :transaction_type ='U') Then
 DECLARE GRNItemCode nvarchar(50);
 DECLARE GRNWhsCode nvarchar(50);
 DECLARE MinIn int;
@@ -21530,9 +21530,9 @@ DECLARE MaxIn int;
 		END IF;
 	  MinIn := MinIn + 1;
 	END WHILE;
-END IF;*/
+END IF;
     ----------------------------------------------------------
-IF Object_type = '59' and (:transaction_type ='A' or :transaction_type ='U') Then
+/*IF Object_type = '59' and (:transaction_type ='A' or :transaction_type ='U') Then
 DECLARE ReceiptItemCode nvarchar(50);
 DECLARE ReceiptWhsCode nvarchar(50);
 DECLARE MinIn int;
@@ -21572,7 +21572,7 @@ DECLARE BaseTypee int;
 			MinIn := MinIn + 1;
 		END WHILE;
 	end if;
-END IF;
+END IF;*/
 
     ----------------------------------------------------------
 

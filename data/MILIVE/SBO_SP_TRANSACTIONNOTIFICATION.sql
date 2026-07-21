@@ -2945,10 +2945,10 @@ IF :object_type = '1470000113' AND (:transaction_type = 'A' OR :transaction_type
 			    error_message := N'Select Packing Type at line - '||MIN_ROW+1;
 			END IF;
 
-			IF ItemCode not like '%PM%' and IFNULL(PackingType,'Tanker Load') = 'Tanker Load' and PackingCapacity <= 1.00 then
+			/*IF ItemCode not like '%PM%' and IFNULL(PackingType,'Tanker Load') = 'Tanker Load' and PackingCapacity <= 1.00 then
 				error := -41022;
 			    error_message := N'Select Packing Capacity at line - '||MIN_ROW+1;
-			END IF;
+			END IF;*/
 		END IF;
 
 		IF ItemCode NOT LIKE '%PM%' AND PackingType NOT IN (
@@ -3217,10 +3217,10 @@ IF :object_type = '112' AND (:transaction_type = 'A' OR :transaction_type = 'U')
 			    error_message := N'Select Packing Type at line - '||MIN_ROW+1;
 			END IF;
 
-			IF ItemCode not like '%PM%' and IFNULL(PackingType,'Tanker Load') = 'Tanker Load' and PackingCapacity <= 1.00 then
+			/*IF ItemCode not like '%PM%' and IFNULL(PackingType,'Tanker Load') = 'Tanker Load' and PackingCapacity <= 1.00 then
 				error := -41022;
 			    error_message := N'Select Packing Capacity at line - '||MIN_ROW+1;
-			END IF;
+			END IF;*/
 
 			IF ItemCode NOT LIKE '%PM%' AND PackingType NOT IN (
 		        SELECT T2."ItemName"
@@ -8490,8 +8490,7 @@ Declare Invremark varchar(500);
 		END IF;
 END IF;
 
-IF Object_type = 'SHIPMASTER' and (:transaction_type ='U') Then
-
+/*IF Object_type = 'SHIPMASTER' and (:transaction_type ='U') Then
 Declare InvDet Int;
 Declare DlDet Int;
 Declare bldate date;
@@ -8515,8 +8514,7 @@ Declare etadate date;
 			END IF;
 		End If;
 	END IF;
-
-END IF;
+END IF;*/
 
 IF Object_type = '15' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
     DECLARE InvDet INT DEFAULT 0;
