@@ -678,7 +678,7 @@ End If;
 IF (:object_type = '1470000113' AND (:transaction_type = 'A')) THEN
 
 	select count(T0."DocEntry") INTO Temp from OPRQ T0 JOIN PRQ1 T1 ON T0."DocEntry" = T1."DocEntry" JOIN OUSR T3 ON T3."USERID" = T0."UserSign"
-	WHERE (T1."ItemCode" LIKE 'PC%') AND T3."USER_CODE" IN ('prod07') and T0."DocEntry"=:list_of_cols_val_tab_del;
+	WHERE (T1."ItemCode" LIKE 'PC%' OR T1."ItemCode" LIKE 'OF%' OR T1."ItemCode" LIKE 'DI%') AND T3."USER_CODE" IN ('prod07') and T0."DocEntry"=:list_of_cols_val_tab_del;
 
 	If :Temp > 0 then
 
@@ -686,7 +686,7 @@ IF (:object_type = '1470000113' AND (:transaction_type = 'A')) THEN
 
 		MailID = 'purchasemgr1@matangiindustries.com,purchase@matangiindustries.com,sanjay@matangiindustries.com,deepak@matangiindustries.com,purchase4@matangiindustries.com,purchasemgr1@matangiindustries.com';
 		Mobile := '';
-		EmailCC := 'mgrppc@matangiindustries.com,ea1@matangiindustries.com,exppc@matangiindustries.com';
+		EmailCC := 'mgrppc@matangiindustries.com,ea1@matangiindustries.com,exppc@matangiindustries.com,plant@matangiindustries.com,ogops@minalspecialities.com';
 		EmailBCC := 'sap@matangiindustries.com,sap2@matangiindustries.com,sap1@matangiindustries.com';
 		ObjectType := 'P';
 		Mobi_TYPE := 'RM PR Generated - MILIVE';
@@ -1059,7 +1059,7 @@ End If;
 IF (:object_type = '1470000113' AND (:transaction_type IN ('A'))) THEN
 
 	select count(T0."DocEntry") INTO Temp from OPRQ T0 JOIN PRQ1 T1 ON T0."DocEntry" = T1."DocEntry"
-	WHERE (T1."ItemCode" LIKE '%RM%' OR T1."ItemCode" LIKE '%PM%' OR T1."ItemCode" LIKE '%FG%' OR T1."ItemCode" LIKE '%TR%')
+	WHERE (T1."ItemCode" LIKE 'OF%')
 	and T0."DocEntry"=:list_of_cols_val_tab_del;
 
 	If :Temp > 0 then
@@ -1069,11 +1069,11 @@ IF (:object_type = '1470000113' AND (:transaction_type IN ('A'))) THEN
 		MailID = 'app.test@matangiindustries.com';
 		Mobile := '';
 		EmailCC := '';
-		EmailBCC := '';
+		EmailBCC := 'sap@matangiindustries.com,sap2@matangiindustries.com,sap1@matangiindustries.com';
 		ObjectType := 'R';
 		Mobi_TYPE := 'PR Generated - QuotePilot';
 		Select CURRENT_SCHEMA Into DBName from Dummy;
-		If(:DBName = 'ZZ_TMILLP_01_04_26') Then
+		If(:DBName = 'MILIVE') Then
 			CALL "MOBIALERT"."Add_Config_Proc" (334,:DocEntry,:transaction_type,:MailID,:Mobile,:EmailCC,:EmailBCC,:ObjectType,:Mobi_TYPE);
 		END IF;
 	End If;

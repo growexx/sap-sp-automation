@@ -6978,7 +6978,8 @@ DECLARE MaxLineITQ Int;
 		select WTR1."FromWhsCod" into Frmwhs from WTR1 where WTR1."DocEntry"= :list_of_cols_val_tab_del and WTR1."VisOrder"=MinLineITQ;
 
 			IF Frmwhs IN ('2PC-QCTR','SC-QC-TR','SC-QC','2SC-QC','JW-QC','PC-QC-TR','PC-QC','2PC-QC','3PC-QC') THEN
-				If (Usr <> 'qc02' AND Usr <> 'qc03' AND Usr <> 'sap01' AND Usr <> 'engg03' AND Usr <> 'manager' AND Usr <> 'unithead1' AND Usr <> 'prod08' AND Usr <> 'dispatch') then
+				If (Usr <> 'qc02' AND Usr <> 'qc03' AND Usr <> 'sap01' AND Usr <> 'engg03' AND Usr <> 'manager'
+				AND Usr <> 'unithead1' AND Usr <> 'prod08' AND Usr <> 'dispatch' AND Usr <> 'account1') then
 				    error :=14501;
 				    error_message := N'You are not allowed to do inventory transfer from QC Warehouse'||MinLineITQ;
 				END IF;
@@ -25743,8 +25744,7 @@ IF :object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
                 SELECT W0."DocNum", W0."DocDate", W1."ItemCode", SUM(W1."Quantity") AS "TotalQty"
                 FROM OWTR W0
                 INNER JOIN WTR1 W1 ON W0."DocEntry" = W1."DocEntry"
-                GROUP BY W0."DocNum", W0."DocDate", W1."ItemCode"
-            ) O ON CA."ChallanNum" = O."DocNum" AND CA."ChallanDate" = O."DocDate" AND CA."ItemCode" = O."ItemCode"
+                GROUP BY W0."DocNum", W0."DocDate", W1."ItemCode") O ON CA."ChallanNum" = O."DocNum" AND CA."ChallanDate" = O."DocDate" AND CA."ItemCode" = O."ItemCode"
 
             -- Map 2: Pre-calculated historical consumption entries (Excluding current DocEntry)
             LEFT JOIN (
@@ -25756,8 +25756,7 @@ IF :object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
                     UNION ALL
                     SELECT "DocEntry", "ItemCode", "U_JobChallan3" AS "ChallanNum", "U_JWDate3" AS "ChallanDate", "U_JCQty3" AS "Qty" FROM IGE1 WHERE IFNULL("U_JobChallan3", 0) <> 0
                     UNION ALL
-                    SELECT "DocEntry", "ItemCode", "U_JobChallan4" AS "ChallanNum", "U_JWDate4" AS "ChallanDate", "U_JWQty4" AS "Qty" FROM IGE1 WHERE IFNULL("U_JobChallan4", 0) <> 0
-                ) HistC
+                    SELECT "DocEntry", "ItemCode", "U_JobChallan4" AS "ChallanNum", "U_JWDate4" AS "ChallanDate", "U_JWQty4" AS "Qty" FROM IGE1 WHERE IFNULL("U_JobChallan4", 0) <> 0) HistC
                 WHERE HistC."DocEntry" <> :list_of_cols_val_tab_del
                 GROUP BY HistC."ItemCode", HistC."ChallanNum", HistC."ChallanDate"
             ) H ON CA."ItemCode" = H."ItemCode" AND CA."ChallanNum" = H."ChallanNum" AND CA."ChallanDate" = H."ChallanDate"
@@ -25767,6 +25766,145 @@ IF :object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') 
         ) SRC
         WHERE SRC."EnteredQty" > SRC."Bal";
     END IF;
+END IF;
+-----------------------------------------------------------------------------------------------------------------
+-- JOBWORK TRANSACTION VALIDATION: GOODS ISSUE DIRECT VIA IGE21 (OIGE / IGE1 / IGE21)
+-----------------------------------------------------------------------------------------------------------------
+IF :object_type = '60' AND (:transaction_type = 'A' OR :transaction_type = 'U') THEN
+
+    -- Internal Variable Declarations
+    DECLARE JobworkFirmCode INT := -1;
+    DECLARE IsJTSeries INT := 0;
+    DECLARE HasDirectJWCFGRows INT := 0;
+
+    -- Cache Jobwork FirmCode
+    SELECT IFNULL(MAX("FirmCode"), -1)
+    INTO JobworkFirmCode
+    FROM OMRC
+    WHERE "FirmName" = 'Jobwork';
+
+    -- Flag if Document is using JT Series
+    SELECT COUNT(1)
+    INTO IsJTSeries
+    FROM OIGE T0
+    INNER JOIN NNM1 T1 ON T0."Series" = T1."Series"
+    WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+      AND IFNULL(T1."SeriesName", '') LIKE 'JT%';
+
+    -- Flag if Document contains DIRECT (Non-Production, BaseType <> 202) rows from JW-CFG Warehouse
+    SELECT COUNT(1)
+    INTO HasDirectJWCFGRows
+    FROM IGE1
+    WHERE "DocEntry" = :list_of_cols_val_tab_del
+      AND "WhsCode" = 'JW-CFG'
+      AND IFNULL("BaseType", -1) <> 202;
+
+    -----------------------------------------------------------------------------------------------
+    -- 1. STRICT SERIES RESTRICTION: JT Series is ONLY allowed for OFFG0047 Direct Issues
+    -- (Bypasses standard Issue for Production where BaseType = 202, e.g., OFRM0067)
+    -----------------------------------------------------------------------------------------------
+    IF :IsJTSeries > 0 THEN
+        IF EXISTS (
+            SELECT 1
+            FROM IGE1 T0
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T0."ItemCode" <> 'OFFG0047'
+              AND IFNULL(T0."BaseType", -1) <> 202  -- Safe Guard: Ignores Issue for Production lines
+        ) THEN
+            error := 60025;
+            error_message := 'Series Restriction: The JT series is restricted strictly to direct issues of OFFG0047. Selection of JT series for other direct products is not allowed.';
+        END IF;
+    END IF;
+
+    -----------------------------------------------------------------------------------------------
+    -- 2. VALIDATION BLOCK FOR OFFG0047 DIRECT GOODS ISSUE (JW-CFG & JT Series)
+    -- (Applies ONLY to direct issues, completely ignoring BaseType = 202 production entries)
+    -----------------------------------------------------------------------------------------------
+    IF :error = 0 AND :IsJTSeries > 0 AND :HasDirectJWCFGRows > 0 THEN
+
+        -- 2A. DIRECT ISSUE GATEKEEPER: Enforce Jobwork Firm Category for JW-CFG Direct Issues
+        IF EXISTS (
+            SELECT 1
+            FROM IGE1 T0
+            INNER JOIN OITM T1 ON T0."ItemCode" = T1."ItemCode"
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T0."WhsCode" = 'JW-CFG'
+              AND IFNULL(T0."BaseType", -1) <> 202
+              AND T1."FirmCode" <> :JobworkFirmCode
+        ) THEN
+            error := 60020;
+            error_message := 'Direct Goods Issue from JW-CFG is restricted to Jobwork items only.';
+        END IF;
+
+        -- 2B. MANDATORY HEADER FIELDS: Vehicle No & Consignee Details
+        IF :error = 0 AND EXISTS (
+            SELECT 1
+            FROM OIGE T0
+            INNER JOIN IGE1 T1 ON T0."DocEntry" = T1."DocEntry"
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T1."WhsCode" = 'JW-CFG'
+              AND T1."ItemCode" = 'OFFG0047'
+              AND IFNULL(T1."BaseType", -1) <> 202
+              AND (
+                  IFNULL(T0."U_UNE_VehicleNo", '') = ''
+                  OR IFNULL(T0."U_Consignee_Code", '') = ''
+                  OR IFNULL(T0."U_Consignee_Name", '') = ''
+                  OR IFNULL(T0."U_Consignee_Add", '') = ''
+              )
+        ) THEN
+            error := 60021;
+            error_message := 'Mandatory Fields Missing: Vehicle No, Consignee Code, Consignee Name, and Consignee Address are required for OFFG0047 direct issue from JW-CFG.';
+        END IF;
+
+        -- 2C. MANDATORY REFERENCE CHECK VIA IGE21 FOR ITEM OFFG0047
+        IF :error = 0 AND EXISTS (
+            SELECT 1
+            FROM IGE1 T0
+            LEFT JOIN IGE21 T1 ON T0."DocEntry" = T1."DocEntry"
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T0."WhsCode" = 'JW-CFG'
+              AND T0."ItemCode" = 'OFFG0047'
+              AND IFNULL(T0."BaseType", -1) <> 202
+              AND T1."RefDocNum" IS NULL
+        ) THEN
+            error := 60022;
+            error_message := 'Reference Document Mandatory: Document Reference in IGE21 cannot be left blank for direct issue of OFFG0047.';
+        END IF;
+
+        -- 2D. DUPLICATE REFERENCE CHECK VIA IGE21 FOR ITEM OFFG0047
+        IF :error = 0 AND EXISTS (
+            SELECT 1
+            FROM IGE1 T0
+            INNER JOIN IGE21 T1 ON T0."DocEntry" = T1."DocEntry"
+            INNER JOIN IGE21 T2 ON T1."RefDocNum" = T2."RefDocNum"
+                               AND T1."RefObjType" = T2."RefObjType"
+                               AND T1."DocEntry" <> T2."DocEntry"
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T0."WhsCode" = 'JW-CFG'
+              AND T0."ItemCode" = 'OFFG0047'
+              AND IFNULL(T0."BaseType", -1) <> 202
+        ) THEN
+            error := 60023;
+            error_message := 'Duplicate Reference Error: This Referenced Document Number in IGE21 has already been linked to another Goods Issue.';
+        END IF;
+
+        -- 2E. STRICT LINK CHECK: ONLY PRODUCTION ORDERS ALLOWED IN IGE21 (RefObjType = '202')
+        IF :error = 0 AND EXISTS (
+            SELECT 1
+            FROM IGE1 T0
+            INNER JOIN IGE21 T1 ON T0."DocEntry" = T1."DocEntry"
+            WHERE T0."DocEntry" = :list_of_cols_val_tab_del
+              AND T0."WhsCode" = 'JW-CFG'
+              AND T0."ItemCode" = 'OFFG0047'
+              AND IFNULL(T0."BaseType", -1) <> 202
+              AND T1."RefObjType" <> '202'
+        ) THEN
+            error := 60024;
+            error_message := 'Invalid Reference Type: Only Production Orders (Object Type 202) are permitted in Document Reference Information for OFFG0047.';
+        END IF;
+
+    END IF;
+
 END IF;
 -- Select the return values-
 select :error, :error_message FROM dummy;
